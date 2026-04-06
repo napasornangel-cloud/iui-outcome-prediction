@@ -1,34 +1,61 @@
-﻿# env
+﻿# ======================
+# ENV / PYTHON
+# ======================
 .venv/
 __pycache__/
 *.pyc
 *.pyo
 
-# data
+# ======================
+# DATA (raw / sensitive)
+# ======================
 data/
 *.csv
 
-# models
-models/
-*.joblib
-*.pkl
+# ======================
+# MODELS
+# ✅ อนุญาต model ที่ใช้ deploy
+# ======================
+# ignore model อื่น ๆ (optional)
+# models/
 
-# catboost
+# ❗ allow model ที่ใช้ใน app
+!src/models/saved_models/
+!src/models/saved_models/**
+!*.joblib
+!*.pkl
+
+# ======================
+# REPORTS / FIGURES
+# ======================
+# ignore output อื่น
+reports/
+
+# ❗ allow SHAP / important figures
+!src/reports/figures/
+!src/reports/figures/**
+!*.png
+!*.jpg
+
+# ======================
+# CATBOOST
+# ======================
 catboost_info/
 
-# outputs
-reports/
-*.png
-*.jpg
-
-# logs
+# ======================
+# LOGS
+# ======================
 *.log
 *.tmp
 
-# secrets
+# ======================
+# SECRETS
+# ======================
 .env
 
-# misc
+# ======================
+# MISC
+# ======================
 .ipynb_checkpoints/
 .DS_Store
 Thumbs.db
