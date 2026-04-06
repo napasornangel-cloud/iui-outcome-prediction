@@ -14,33 +14,33 @@ data/
 
 # ======================
 # MODELS
-# ✅ อนุญาต model ที่ใช้ deploy
 # ======================
-# ignore model อื่น ๆ (optional)
-# models/
+# ❌ ignore ทุกอย่างใน models ก่อน
+src/models/*
 
-# ❗ allow model ที่ใช้ใน app
+# ✅ allow path ที่ต้องใช้ (สำคัญมาก ต้องเปิด parent ก่อน)
+!src/models/
 !src/models/saved_models/
 !src/models/saved_models/**
-!*.joblib
-!*.pkl
+
+# ✅ allow เฉพาะ model files
+!src/models/saved_models/**/*.joblib
+!src/models/saved_models/**/*.pkl
 
 # ======================
 # REPORTS / FIGURES
 # ======================
-# ignore output อื่น
-reports/
+# ❌ ignore ทั้งหมดก่อน
+src/reports/*
 
-# ❗ allow SHAP / important figures
+# ✅ เปิด path
+!src/reports/
 !src/reports/figures/
 !src/reports/figures/**
-!*.png
-!*.jpg
 
-# ======================
-# CATBOOST
-# ======================
-catboost_info/
+# ✅ allow เฉพาะรูป
+!src/reports/figures/**/*.png
+!src/reports/figures/**/*.jpg
 
 # ======================
 # LOGS
