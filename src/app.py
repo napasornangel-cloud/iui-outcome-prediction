@@ -82,21 +82,20 @@ TRAINING_MEDIANS = {
     "Infertility_Type":               0.0,
 }
 
-# Input validation rules: (min, max)
 VALIDATION_RULES = {
-    "Age_Female":             (18, 55),
-    "Body_Mass_Index":        (10, 60),
-    "Menstrual_Interval_Days": (15, 180),
-    "Cycle_Day":              (1, 40),
-    "First_Volume":           (0, 20),
-    "First_Count":            (0, 500),
-    "First_Motile":           (0, 100),
+    "Age_Female":               (18, 55),
+    "Body_Mass_Index":          (10, 60),
+    "Menstrual_Interval_Days":  (15, 180),
+    "Cycle_Day":                (1, 40),
+    "First_Volume":             (0, 20),
+    "First_Count":              (0, 500),
+    "First_Motile":             (0, 100),
     "First_Progressive_Motile": (0, 100),
-    "Pre_Count":              (0, 500),
-    "Pre_Motile":             (0, 100),
-    "Post_Count":             (0, 500),
-    "Post_TPMSC":             (0, 500),
-    "Post_Motile":            (0, 100),
+    "Pre_Count":                (0, 500),
+    "Pre_Motile":               (0, 100),
+    "Post_Count":               (0, 500),
+    "Post_TPMSC":               (0, 500),
+    "Post_Motile":              (0, 100),
 }
 
 # =============================
@@ -614,16 +613,14 @@ elif "Model" in page:
         <h3>Validation</h3>
         <ul style="color:#37474f; line-height:2;">
             <li>Primary: Patient-level GroupShuffleSplit (80/20), seed 42</li>
-            <li>Secondary: Temporal holdout — trained 2017–2023, tested 2024–2025</li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown('<div class="section-header">📊 Primary vs Temporal Validation</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">📊 Model Validation Performance</div>', unsafe_allow_html=True)
     comparison_df = pd.DataFrame({
-        "Metric":   ["PR-AUC", "ROC-AUC", "Brier", "Sensitivity", "Specificity", "NPV"],
-        "Primary":  [0.1386, 0.6808, 0.2207, 0.902, 0.430, 0.984],
-        "Temporal": [0.2434, 0.7894, 0.2053, 0.818, 0.461, 0.975],
+        "Metric": ["PR-AUC", "ROC-AUC", "Brier Score", "Sensitivity", "Specificity", "NPV"],
+        "Value":  [0.1386,   0.6808,    0.2207,        0.902,         0.430,          0.984],
     })
     st.dataframe(comparison_df, use_container_width=True, hide_index=True)
 
