@@ -15,32 +15,22 @@ data/
 # ======================
 # MODELS
 # ======================
-# ❌ ignore ทุกอย่างใน models ก่อน
-src/models/*
-
-# ✅ allow path ที่ต้องใช้ (สำคัญมาก ต้องเปิด parent ก่อน)
-!src/models/
-!src/models/saved_models/
-!src/models/saved_models/**
-
-# ✅ allow เฉพาะ model files
-!src/models/saved_models/**/*.joblib
-!src/models/saved_models/**/*.pkl
+models/*
+!models/
+!models/saved_models/
+!models/saved_models/**
+!models/saved_models/**/*.joblib
+!models/saved_models/**/*.pkl
 
 # ======================
 # REPORTS / FIGURES
 # ======================
-# ❌ ignore ทั้งหมดก่อน
-src/reports/*
-
-# ✅ เปิด path
-!src/reports/
-!src/reports/figures/
-!src/reports/figures/**
-
-# ✅ allow เฉพาะรูป
-!src/reports/figures/**/*.png
-!src/reports/figures/**/*.jpg
+reports/*
+!reports/
+!reports/figures/
+!reports/figures/**
+!reports/figures/**/*.png
+!reports/figures/**/*.jpg
 
 # ======================
 # LOGS

@@ -9,42 +9,43 @@ from pathlib import Path
 # =============================
 # Paths / fixed settings
 # =============================
-BASE_DIR = Path(__file__).resolve().parent  # app.py is inside src/
+SRC_DIR      = Path(__file__).resolve().parent        # src/
+PROJECT_ROOT = SRC_DIR.parent                          # iui_ml_prediction/
 
-BASE_MODEL_PATH = BASE_DIR / "models" / "saved_models" / "final_model" / "XGBoost_Baseline_calibration_base_model.joblib"
-CALIBRATOR_PATH = BASE_DIR / "models" / "saved_models" / "final_model" / "isotonic_calibrator_final_xgb.joblib"
-SHAP_IMG        = BASE_DIR / "reports" / "figures" / "shap_final_xgb" / "SHAP_Beeswarm_Final_XGBoost_Baseline.png"
+BASE_MODEL_PATH = PROJECT_ROOT / "models" / "saved_models" / "final_model" / "XGBoost_Baseline_calibration_base_model.joblib"
+CALIBRATOR_PATH = PROJECT_ROOT / "models" / "saved_models" / "final_model" / "isotonic_calibrator_final_xgb.joblib"
+SHAP_IMG        = PROJECT_ROOT / "reports" / "figures" / "shap_final_xgb" / "SHAP_Beeswarm_Final_XGBoost_Baseline.png"
 
 FINAL_FEATURES = [
     "Uterine_Factors", "Total_Female_Pathology", "Ovulatory_Factors",
     "Cycle_Day", "First_Count", "Pre_Count", "Post_TPMSC",
     "Gynecological_Surgical_History", "Delta_Motile", "Age_Female",
-    "First_Volume", "Post_Count", "First_Progressive_Motile",
-    "Menstrual_Interval_Days", "BMI_InfertilityType_Interaction", "First_TPMSC",
+    "First_Volume", "Post_Count", "Menstrual_Interval_Days",
+    "First_Progressive_Motile", "First_TPMSC", "BMI_InfertilityType_Interaction",
 ]
 
-LOW_TIER_CUTOFF  = 0.023256
-HIGH_TIER_CUTOFF = 0.055556
+LOW_TIER_CUTOFF  = 0.038760  # verified from calibration set (max of Tier 1)
+HIGH_TIER_CUTOFF = 0.099379  # verified from calibration set (max of Tier 2)
 VERY_LOW_CUTOFF  = 0.01
 
 DISPLAY_MAP = {
     "Uterine_Factors":                 "Uterine factor",
-    "Total_Female_Pathology":          "Total female pathology score",
+    "Total_Female_Pathology":          "Total no. of female pathology factors",
     "Ovulatory_Factors":               "Ovulatory factor",
     "Cycle_Day":                       "IUI cycle day",
-    "Post_TPMSC":                      "Postwash TPMSC",
-    "First_Count":                     "Initial sperm count",
-    "Pre_Count":                       "Prewash sperm count",
-    "Gynecological_Surgical_History":  "Gynecologic surgery history",
-    "Post_Count":                      "Postwash sperm count",
-    "Delta_Motile":                    "Δ Total motility",
-    "Age_Female":                      "Female age",
-    "First_Progressive_Motile":        "Initial progressive motility",
-    "First_Volume":                    "Initial semen volume",
-    "Menstrual_Interval_Days":         "Menstrual cycle interval (days)",
-    "First_Motile":                    "Initial total motility",
-    "BMI_InfertilityType_Interaction": "BMI × infertility type",
-    "First_TPMSC":                     "Initial TPMSC",
+    "Post_TPMSC":                      "Postwash TPMSC (million)",
+    "First_Count":                     "Initial sperm concentration (×10⁶/mL)",
+    "Pre_Count":                       "Prewash sperm concentration (×10⁶/mL)",
+    "Gynecological_Surgical_History":  "Prior gynecologic surgery",
+    "Post_Count":                      "Postwash sperm concentration (×10⁶/mL)",
+    "Delta_Motile":                    "Change in total motility after wash (%)",
+    "Age_Female":                      "Female age (years)",
+    "First_Progressive_Motile":        "Initial progressive motility (%)",
+    "First_Volume":                    "Initial semen volume (mL)",
+    "Menstrual_Interval_Days":         "Menstrual cycle length (days)",
+    "First_Motile":                    "Initial total motility (%)",
+    "BMI_InfertilityType_Interaction": "BMI × infertility type (interaction term)",
+    "First_TPMSC":                     "Initial TPMSC (million)",
 }
 
 REQUIRED_RAW_COLUMNS = [
@@ -79,6 +80,7 @@ TRAINING_MEDIANS = {
     "Menstrual_Interval_Days":        29.0,
     "First_Motile":                   54.7,
     "Body_Mass_Index":                21.718066,
+    # encoding: Primary = 0, Secondary = 1 (verified from data)
     "Infertility_Type":               0.0,
 }
 
@@ -234,9 +236,6 @@ def assign_probability_tier(p_cal):
 def very_low_flag(p_cal):
     return "Yes" if p_cal < VERY_LOW_CUTOFF else "No"
 
-def cum3_from_p1(p1):
-    return 1.0 - (1.0 - p1) ** 3
-
 def group_display_name(raw_name):
     return DISPLAY_MAP.get(str(raw_name), str(raw_name).replace("_", " "))
 
@@ -345,7 +344,6 @@ def plot_gauge(p_cal):
     return fig
 
 def render_result_card(p_raw, p_cal):
-    p_cum3 = cum3_from_p1(p_cal)
     tier_label, tier_css = assign_probability_tier(p_cal)
     vlow = very_low_flag(p_cal)
 
@@ -362,30 +360,41 @@ def render_result_card(p_raw, p_cal):
                     <div class="value">{p_raw:.1%}</div>
                 </div>
                 <div class="metric-box">
-                    <div class="label">Calibrated</div>
+                    <div class="label">Calibrated per-cycle</div>
                     <div class="value">{p_cal:.1%}</div>
-                </div>
-                <div class="metric-box">
-                    <div class="label">Within 3 cycles *</div>
-                    <div class="value">{p_cum3:.1%}</div>
                 </div>
             </div>
             <span class="tier-badge {tier_css}">{tier_label}</span>
-            &nbsp;&nbsp;<small style="color:#78909c">Very low flag: {vlow}</small>
+            &nbsp;&nbsp;<small style="color:#78909c">Very low probability flag: {vlow}</small>
         </div>
         """, unsafe_allow_html=True)
 
     interp = {
-        "Tier 1": "This result falls in the <b>low-probability</b> group. In the study cohort, this group had the lowest cumulative pregnancy rates across 1–3 cycles.",
-        "Tier 2": "This result falls in the <b>intermediate-probability</b> group. This profile suggests a moderate expected IUI yield.",
-        "Tier 3": "This result falls in the <b>high-probability</b> group. In the study cohort, this group had the highest cumulative pregnancy rates across 1–3 cycles.",
+        "Tier 1": (
+            "This result falls in the <b>low-probability</b> group. "
+            "In the study cohort, patients in this group had an observed pregnancy rate of "
+            "<b>4.6% per cycle</b>. Among patients who completed up to 3 cycles, "
+            "the cumulative pregnancy rate was <b>10.1%</b>."
+        ),
+        "Tier 2": (
+            "This result falls in the <b>intermediate-probability</b> group. "
+            "In the study cohort, patients in this group had an observed pregnancy rate of "
+            "<b>10.0% per cycle</b>. Among patients who completed up to 3 cycles, "
+            "the cumulative pregnancy rate was <b>12.2%</b>."
+        ),
+        "Tier 3": (
+            "This result falls in the <b>high-probability</b> group. "
+            "In the study cohort, patients in this group had an observed pregnancy rate of "
+            "<b>18.8% per cycle</b>."
+        ),
     }
     key = "Tier 1" if "Tier 1" in tier_label else ("Tier 2" if "Tier 2" in tier_label else "Tier 3")
     st.markdown(f'<div class="interp-box">💬 {interp[key]}</div>', unsafe_allow_html=True)
     st.markdown("""
     <div class="disclaimer-box">
-    * Within 3 cycles is approximated as 1 − (1 − p)³, assuming independent cycles with constant per-cycle probability.<br>
-    † SHAP explanations reflect model output before probability calibration.
+    † Cumulative rates are based on observed outcomes in the study cohort (fixed-cohort analysis)
+    and should not be interpreted as independent per-cycle probabilities.<br>
+    ‡ SHAP explanations reflect model output before probability calibration.
     </div>
     """, unsafe_allow_html=True)
 
@@ -398,7 +407,8 @@ def build_example_input():
         "Post_Count": 12.0, "Post_Motile": 80.0, "Pre_Motile": 60.0,
         "Age_Female": 32.0, "First_Progressive_Motile": 40.0, "First_Volume": 2.5,
         "Menstrual_Interval_Days": 28.0, "First_Motile": 60.0,
-        "Body_Mass_Index": 22.0, "Infertility_Type": 1,
+        # encoding verified from data: Primary=0, Secondary=1
+        "Body_Mass_Index": 22.0, "Infertility_Type": 0,
     }])
 
 # =============================
@@ -455,8 +465,13 @@ if "Manual" in page:
             bmi                     = st.number_input("BMI (kg/m²)", 10.0, 60.0, 21.7, 0.1)
             menstrual_interval_days = st.number_input("Menstrual cycle interval (days)", 15.0, 180.0, 29.0, 1.0)
             cycle_day               = st.number_input("IUI cycle day", 1.0, 40.0, 14.0, 1.0)
-            infertility_type        = st.selectbox("Infertility type", options=[1, 0],
-                                                   format_func=lambda x: "Primary" if x == 1 else "Secondary")
+
+            # encoding verified from data: Primary=0, Secondary=1
+            infertility_type = st.selectbox(
+                "Infertility type",
+                options=[0, 1],
+                format_func=lambda x: "Primary (no prior pregnancy)" if x == 0 else "Secondary (prior pregnancy)"
+            )
 
             st.markdown('<div class="form-group-label">🔬 Female Pathology Factors (0=absent, 1=present)</div>', unsafe_allow_html=True)
             c1a, c1b = st.columns(2)
@@ -532,7 +547,7 @@ if "Manual" in page:
 
 elif "Batch" in page:
     st.markdown('<div class="section-header">📂 Batch Prediction from CSV</div>', unsafe_allow_html=True)
-    st.write("Upload a CSV with the required raw input columns.")
+    st.write("Upload a CSV with the required raw input columns. Use Infertility_Type: 0=Primary, 1=Secondary.")
     uploaded = st.file_uploader("Upload CSV", type=["csv"], key="upl_calc")
 
     if uploaded is not None:
@@ -546,18 +561,16 @@ elif "Batch" in page:
                     X = compute_engineered_features(df_raw)
                     p_raw, p_cal = predict_raw_and_calibrated(X)
                     out = df_raw.copy()
-                    out["raw_per_cycle_probability"]                     = p_raw
-                    out["calibrated_per_cycle_probability"]              = p_cal
-                    out["approx_cumulative_probability_within_3_cycles"] = [cum3_from_p1(float(x)) for x in p_cal]
+                    out["raw_per_cycle_probability"]        = p_raw
+                    out["calibrated_per_cycle_probability"] = p_cal
                     tiers = [assign_probability_tier(float(x)) for x in p_cal]
                     out["risk_tier"]     = [t[0] for t in tiers]
                     out["very_low_flag"] = [very_low_flag(float(x)) for x in p_cal]
 
                 st.success(f"✅ {len(out)} rows processed")
                 show_cols = ["raw_per_cycle_probability", "calibrated_per_cycle_probability",
-                             "approx_cumulative_probability_within_3_cycles", "risk_tier", "very_low_flag"]
+                             "risk_tier", "very_low_flag"]
                 st.dataframe(out[show_cols], use_container_width=True, hide_index=True)
-                st.caption("* Within 3 cycles assumes independent cycles with constant per-cycle probability.")
                 st.download_button("⬇️ Download Results (CSV)",
                                    out.to_csv(index=False).encode("utf-8"),
                                    "iui_predictions_out.csv", "text/csv")
@@ -609,20 +622,74 @@ elif "Model" in page:
             <li>Imbalance handling: No resampling (scale_pos_weight)</li>
             <li>Probability calibration: Post-hoc isotonic regression</li>
             <li>Feature selection: Gain-based importance with 1-SE rule</li>
+            <li>Training cohort: 2,348 cycles | Test cohort: 597 cycles</li>
+            <li>Event rate: ~6.2% (clinical pregnancy per cycle)</li>
         </ul>
         <h3>Validation</h3>
         <ul style="color:#37474f; line-height:2;">
-            <li>Primary: Patient-level GroupShuffleSplit (80/20), seed 42</li>
+            <li>Patient-level GroupShuffleSplit (80/20), seed 42</li>
+            <li>No patient overlap between training and test sets</li>
+            <li>Bootstrap 95% CI computed from 1,000 resamples</li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
 
+    # FIX 4: ตัวเลข metrics ถูกต้อง พร้อม 95% CI จาก bootstrap
+    # และใช้ Brier calibrated แทน raw
     st.markdown('<div class="section-header">📊 Model Validation Performance</div>', unsafe_allow_html=True)
     comparison_df = pd.DataFrame({
-        "Metric": ["PR-AUC", "ROC-AUC", "Brier Score", "Sensitivity", "Specificity", "NPV"],
-        "Value":  [0.1386,   0.6808,    0.2207,        0.902,         0.430,          0.984],
+        "Metric": [
+            "ROC-AUC",
+            "PR-AUC",
+            "Brier Score (uncalibrated)",
+            "Brier Score (calibrated)",
+            "Sensitivity",
+            "Specificity",
+            "NPV",
+            "Precision",
+        ],
+        "Value": [
+            0.6637,
+            0.1298,
+            0.2195,
+            0.0645,
+            0.634,
+            0.653,
+            0.960,
+            0.119,
+        ],
+        "95% CI": [
+            "0.579–0.745",
+            "0.078–0.202",
+            "0.212–0.228",
+            "0.047–0.082",
+            "—",
+            "—",
+            "—",
+            "—",
+        ],
+        "Note": [
+            "Bootstrap (n=1,000)",
+            "Bootstrap (n=1,000)",
+            "Bootstrap (n=1,000)",
+            "Bootstrap (n=1,000)",
+            "At threshold = 0.523",
+            "At threshold = 0.523",
+            "At threshold = 0.523",
+            "At threshold = 0.523",
+        ],
     })
     st.dataframe(comparison_df, use_container_width=True, hide_index=True)
+
+    st.markdown('<div class="section-header">📊 Risk Tier Performance (Test Set)</div>', unsafe_allow_html=True)
+    tier_df = pd.DataFrame({
+        "Risk Tier":           ["Tier 1 (Low)", "Tier 2 (Intermediate)", "Tier 3 (High)"],
+        "N cycles":            [370, 211, 16],
+        "Observed pregnancies":[17, 21, 3],
+        "Pregnancy rate":      ["4.6%", "10.0%", "18.8%"],
+    })
+    st.dataframe(tier_df, use_container_width=True, hide_index=True)
+    st.caption("Monotonic increase across tiers confirmed (p-trend from risk stratification analysis).")
 
     st.markdown('<div class="section-header">📋 Final Model Predictors</div>', unsafe_allow_html=True)
     feature_table = pd.DataFrame({
@@ -644,7 +711,9 @@ elif "Model" in page:
     ⚠️ <b>Disclaimer</b><br>
     This tool is a research prototype for academic purposes.
     It supports — not replaces — clinical judgment.
-    Outputs are statistical estimates from a single-center retrospective cohort.
+    Outputs are statistical estimates derived from a single-center retrospective cohort
+    of IUI cycles performed at a Thai fertility center.
+    External validation in independent cohorts has not yet been performed.
     Do not use as the sole basis for clinical decision-making.
     </div>
     """, unsafe_allow_html=True)
