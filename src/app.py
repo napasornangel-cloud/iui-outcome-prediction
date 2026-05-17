@@ -448,7 +448,7 @@ def render_result_card(p_raw, p_cal, model_type="postwash"):
     tier_label, tier_css, obs_rate = assign_tier(p_cal, model_type)
     vlow = very_low_flag(p_cal)
     badge_class = "model-badge-pw" if model_type == "postwash" else "model-badge-fv"
-    badge_text  = "🔬 Postwash Model" if model_type == "postwash" else "🏥 First Visit Model"
+    badge_text  = "🔬 Procedure-Day Model" if model_type == "postwash" else "🏥 Pre-treatment Model"
 
     col_gauge, col_detail = st.columns([1, 2])
     with col_gauge:
@@ -542,15 +542,15 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("<div style='font-size:0.78rem; color:#90caf9; margin-bottom:0.4rem;'>📥 Download CSV Templates</div>", unsafe_allow_html=True)
     st.download_button(
-        "Postwash Model Template",
+        "Procedure-Day Model Template",
         build_pw_example().to_csv(index=False).encode("utf-8"),
-        "iui_postwash_template.csv", "text/csv",
+        "iui_procedure_day_template.csv", "text/csv",
         use_container_width=True
     )
     st.download_button(
-        "First Visit Model Template",
+        "Pre-treatment Model Template",
         build_fv_example().to_csv(index=False).encode("utf-8"),
-        "iui_firstvisit_template.csv", "text/csv",
+        "iui_pretreatment_template.csv", "text/csv",
         use_container_width=True
     )
     st.markdown("""
@@ -570,11 +570,11 @@ if "Manual" in page:
 
     model_choice = st.radio(
         "Select prediction model:",
-        ["🔬 Postwash Model (day of IUI, after sperm preparation)",
-         "🏥 First Visit Model (pre-procedural, before IUI initiation)"],
+        ["🔬 Procedure-Day Model (day of IUI, after sperm preparation)",
+         "🏥 Pre-treatment Model (before IUI initiation, no postwash data required)"],
         horizontal=True
     )
-    model_type = "postwash" if "Postwash" in model_choice else "first_visit"
+    model_type = "postwash" if "Procedure-Day" in model_choice else "first_visit"
 
     st.caption("Leave fields as 0 if value is unavailable — missing values will be imputed automatically.")
 
@@ -682,10 +682,10 @@ elif "Batch" in page:
 
     model_choice = st.radio(
         "Select prediction model:",
-        ["🔬 Postwash Model", "🏥 First Visit Model"],
+        ["🔬 Procedure-Day Model", "🏥 Pre-treatment Model"],
         horizontal=True
     )
-    model_type = "postwash" if "Postwash" in model_choice else "first_visit"
+    model_type = "postwash" if "Procedure-Day" in model_choice else "first_visit"
 
     st.write("Upload a CSV with the required input columns.")
     uploaded = st.file_uploader("Upload CSV", type=["csv"], key="upl_calc")
@@ -722,10 +722,10 @@ elif "Explanation" in page:
 
     model_choice = st.radio(
         "Select prediction model:",
-        ["🔬 Postwash Model", "🏥 First Visit Model"],
+        ["🔬 Procedure-Day Model", "🏥 Pre-treatment Model"],
         horizontal=True
     )
-    model_type = "postwash" if "Postwash" in model_choice else "first_visit"
+    model_type = "postwash" if "Procedure-Day" in model_choice else "first_visit"
 
     uploaded2 = st.file_uploader("Upload CSV", type=["csv"], key="upl_exp")
 
@@ -762,16 +762,16 @@ elif "Explanation" in page:
 elif "Model" in page:
     st.markdown('<div class="section-header">ℹ️ Model Information</div>', unsafe_allow_html=True)
 
-    tab1, tab2 = st.tabs(["🔬 Postwash Model", "🏥 First Visit Model"])
+    tab1, tab2 = st.tabs(["🔬 Procedure-Day Model", "🏥 Pre-treatment Model"])
 
     with tab1:
         st.markdown("""
         <div class="result-card">
-            <span class="model-badge-pw">🔬 Postwash Model</span>
+            <span class="model-badge-pw">🔬 Procedure-Day Model</span>
             <h3>Model Details</h3>
             <ul style="color:#37474f; line-height:2;">
                 <li>Algorithm: <b>XGBoost</b> with 16 selected predictors</li>
-                <li>Timing: <b>Day of IUI</b> (after sperm preparation)</li>
+                <li>Timing: <b>Day of IUI procedure</b> (after sperm preparation)</li>
                 <li>Imbalance handling: No resampling (scale_pos_weight)</li>
                 <li>Calibration: Post-hoc isotonic regression</li>
                 <li>Feature selection: Gain-based importance with 1-SE rule</li>
@@ -812,7 +812,7 @@ elif "Model" in page:
     with tab2:
         st.markdown("""
         <div class="result-card">
-            <span class="model-badge-fv">🏥 First Visit Model</span>
+            <span class="model-badge-fv">🏥 Pre-treatment Model</span>
             <h3>Model Details</h3>
             <ul style="color:#37474f; line-height:2;">
                 <li>Algorithm: <b>XGBoost</b> with 16 pre-specified predictors</li>
@@ -846,13 +846,13 @@ elif "Model" in page:
         st.dataframe(fv_tiers, use_container_width=True, hide_index=True)
         st.caption("Cutoffs optimized for first visit probability distribution. Monotonic increase confirmed.")
 
-        st.markdown('<div class="section-header">📊 Comparison: Postwash vs First Visit</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header">📊 Comparison: Procedure-Day vs Pre-treatment Model</div>', unsafe_allow_html=True)
         comp = pd.DataFrame({
-            "Metric":        ["ROC-AUC", "PR-AUC", "Brier (calibrated)", "Sensitivity", "Specificity", "NPV", "PPV"],
-            "Postwash":      ["0.664 (0.579–0.745)", "0.130 (0.078–0.202)", "0.064 (0.047–0.082)",
-                              "90.1% (80.4–97.8%)", "32.9% (29.1–36.9%)", "97.8% (95.5–99.5%)", "9.0% (6.3–11.8%)"],
-            "First Visit":   ["0.624 (0.542–0.707)", "0.096 (0.064–0.145)", "0.065 (0.048–0.082)",
-                              "90.2% (80.4–97.8%)", "31.7% (28.2–35.6%)", "97.8% (95.2–99.5%)", "8.9% (6.2–11.6%)"],
+            "Metric":            ["ROC-AUC", "PR-AUC", "Brier (calibrated)", "Sensitivity", "Specificity", "NPV", "PPV"],
+            "Procedure-Day":     ["0.664 (0.579–0.745)", "0.130 (0.078–0.202)", "0.064 (0.047–0.082)",
+                                  "90.1% (80.4–97.8%)", "32.9% (29.1–36.9%)", "97.8% (95.5–99.5%)", "9.0% (6.3–11.8%)"],
+            "Pre-treatment":     ["0.624 (0.542–0.707)", "0.096 (0.064–0.145)", "0.065 (0.048–0.082)",
+                                  "90.2% (80.4–97.8%)", "31.7% (28.2–35.6%)", "97.8% (95.2–99.5%)", "8.9% (6.2–11.6%)"],
         })
         st.dataframe(comp, use_container_width=True, hide_index=True)
         st.caption("Both models tested on identical held-out test set (597 cycles, 41 pregnancies). Bootstrap 95% CI from 1,000 resamples.")
@@ -867,12 +867,10 @@ elif "Model" in page:
     st.markdown("""
     <div style="background:#fff8e1; border-radius:12px; padding:1rem 1.4rem;
                 color:#e65100; font-size:0.88rem; line-height:1.7; margin-top:1.5rem;">
-    ⚠️ <b>Disclaimer</b><br>
-    This tool is a research prototype for academic purposes only.
-    It supports — not replaces — clinical judgment.
-    Outputs are statistical estimates derived from a single-center retrospective cohort
-    of IUI cycles performed at a Thai fertility center.
+    ⚠️ Disclaimer<br>
+    This tool is a research prototype for academic purposes only. It is intended to support clinical judgment
+    and should not be used as the sole basis for clinical decision-making. Outputs are statistical estimates
+    derived from a single-center retrospective cohort of IUI cycles performed at a Thai fertility center.
     External validation in independent cohorts has not yet been performed.
-    Do not use as the sole basis for clinical decision-making.
     </div>
     """, unsafe_allow_html=True)
