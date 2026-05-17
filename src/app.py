@@ -53,41 +53,41 @@ FV_HIGH_CUTOFF = 0.080
 # =============================
 PW_DISPLAY_MAP = {
     "Uterine_Factors":                 "Uterine factor",
-    "Total_Female_Pathology":          "Total female pathology factors",
+    "Total_Female_Pathology":          "Number of female pathology factors",
     "Ovulatory_Factors":               "Ovulatory factor",
     "Cycle_Day":                       "IUI cycle day",
-    "Post_TPMSC":                      "Postwash TPMSC (million)",
-    "First_Count":                     "Initial sperm concentration (×10⁶/mL)",
-    "Pre_Count":                       "Prewash sperm concentration (×10⁶/mL)",
+    "Post_TPMSC":                      "Postwash TPMSC",
+    "First_Count":                     "Initial sperm concentration",
+    "Pre_Count":                       "Prewash sperm concentration",
     "Gynecological_Surgical_History":  "Prior gynecologic surgery",
-    "Post_Count":                      "Postwash sperm concentration (×10⁶/mL)",
-    "Delta_Motile":                    "Change in total motility after wash (%)",
-    "Age_Female":                      "Female age (years)",
-    "First_Progressive_Motile":        "Initial progressive motility (%)",
-    "First_Volume":                    "Initial semen volume (mL)",
-    "Menstrual_Interval_Days":         "Menstrual cycle length (days)",
-    "First_Motile":                    "Initial total motility (%)",
-    "BMI_InfertilityType_Interaction": "BMI × infertility type",
-    "First_TPMSC":                     "Initial TPMSC (million)",
+    "Post_Count":                      "Postwash sperm count",
+    "Delta_Motile":                    "Change in sperm motility after wash",
+    "Age_Female":                      "Female age",
+    "First_Progressive_Motile":        "Initial progressive motility",
+    "First_Volume":                    "Initial semen volume",
+    "Menstrual_Interval_Days":         "Menstrual cycle length",
+    "First_Motile":                    "Initial total motility",
+    "BMI_InfertilityType_Interaction": "BMI and infertility type combined",
+    "First_TPMSC":                     "Initial TPMSC",
 }
 
 FV_DISPLAY_MAP = {
-    "Age_Female":                    "Female age (years)",
-    "Body_Mass_Index":               "BMI (kg/m²)",
+    "Age_Female":                    "Female age",
+    "Body_Mass_Index":               "BMI",
     "Infertility_Type":              "Infertility type",
-    "Total_infertile_duration":      "Infertility duration (months)",
-    "Menstrual_Interval_Days":       "Menstrual cycle length (days)",
+    "Total_infertile_duration":      "Duration of infertility",
+    "Menstrual_Interval_Days":       "Menstrual cycle length",
     "Uterine_Factors":               "Uterine factor",
     "Ovulatory_Factors":             "Ovulatory factor",
     "Tubal_Factors":                 "Tubal factor",
     "Endometriosis_Factors":         "Endometriosis",
     "Gynecological_Surgical_History":"Prior gynecologic surgery",
-    "Total_Female_Pathology":        "Total female pathology score",
-    "First_Volume":                  "Initial semen volume (mL)",
-    "First_Count":                   "Initial sperm concentration (×10⁶/mL)",
-    "First_Progressive_Motile":      "Initial progressive motility (%)",
-    "First_TPMSC":                   "Initial TPMSC (million)",
-    "BMI_InfertilityType_Interaction":"BMI × infertility type",
+    "Total_Female_Pathology":        "Number of female pathology factors",
+    "First_Volume":                  "Initial semen volume",
+    "First_Count":                   "Initial sperm concentration",
+    "First_Progressive_Motile":      "Initial progressive motility",
+    "First_TPMSC":                   "Initial TPMSC",
+    "BMI_InfertilityType_Interaction":"BMI and infertility type combined",
 }
 
 # =============================
@@ -168,110 +168,151 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600&family=Instrument+Serif:ital@0;1&display=swap');
 
-html, body, [class*="css"] { font-family: 'DM Sans', sans-serif; }
+html, body, [class*="css"] {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+}
 
 section[data-testid="stSidebar"] {
-    background: #0f2b4a;
+    background: #1a2332;
     padding-top: 2rem;
 }
-section[data-testid="stSidebar"] * { color: #e8f0fe !important; }
-.main { background: #f5f7fa; }
+section[data-testid="stSidebar"] * { color: #e2e8f0 !important; }
+.main { background: #f8f9fb; }
 
-.result-card {
+/* Result card */
+.result-wrap {
+    background: white;
+    border-radius: 20px;
+    padding: 2rem 2.5rem;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+.result-model-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #94a3b8;
+    margin-bottom: 0.5rem;
+}
+.result-title {
+    font-family: 'Instrument Serif', serif;
+    font-size: 1.1rem;
+    color: #334155;
+    margin-bottom: 1.2rem;
+}
+.result-number-low  { font-family: 'Instrument Serif', serif; font-size: 4.5rem; line-height: 1; color: #dc2626; font-weight: normal; }
+.result-number-mid  { font-family: 'Instrument Serif', serif; font-size: 4.5rem; line-height: 1; color: #d97706; font-weight: normal; }
+.result-number-high { font-family: 'Instrument Serif', serif; font-size: 4.5rem; line-height: 1; color: #16a34a; font-weight: normal; }
+.result-badge-low  { display:inline-block; background:#fee2e2; color:#dc2626; border-radius:20px; padding:0.3rem 1.2rem; font-size:0.88rem; font-weight:600; margin:0.8rem 0; }
+.result-badge-mid  { display:inline-block; background:#fef3c7; color:#d97706; border-radius:20px; padding:0.3rem 1.2rem; font-size:0.88rem; font-weight:600; margin:0.8rem 0; }
+.result-badge-high { display:inline-block; background:#dcfce7; color:#16a34a; border-radius:20px; padding:0.3rem 1.2rem; font-size:0.88rem; font-weight:600; margin:0.8rem 0; }
+.result-desc {
+    font-size: 0.95rem;
+    color: #64748b;
+    line-height: 1.7;
+    margin-top: 0.8rem;
+    padding-top: 1rem;
+    border-top: 1px solid #f1f5f9;
+}
+
+/* Progress bar for factors */
+.factor-section {
     background: white;
     border-radius: 16px;
     padding: 1.5rem 2rem;
-    box-shadow: 0 2px 12px rgba(15,43,74,0.08);
-    margin-bottom: 1.2rem;
-    border-left: 4px solid #1565c0;
-}
-.result-card h3 {
-    font-family: 'DM Serif Display', serif;
-    color: #0f2b4a;
-    font-size: 1.1rem;
-    margin-bottom: 0.5rem;
-}
-.risk-low {
-    background: #fff5f5;
-    border: 2px solid #fc8181;
-    border-radius: 16px;
-    padding: 2rem;
-    text-align: center;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.05);
     margin-bottom: 1rem;
 }
-.risk-mid {
-    background: #fffbeb;
-    border: 2px solid #f6ad55;
-    border-radius: 16px;
-    padding: 2rem;
-    text-align: center;
+.factor-section-title {
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
     margin-bottom: 1rem;
 }
-.risk-high {
-    background: #f0fff4;
-    border: 2px solid #68d391;
-    border-radius: 16px;
-    padding: 2rem;
-    text-align: center;
-    margin-bottom: 1rem;
+.factor-title-against { color: #dc2626; }
+.factor-title-favor   { color: #16a34a; }
+.factor-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.8rem;
+    gap: 0.8rem;
 }
-.risk-label { font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.3rem; }
-.risk-label-low  { color: #c53030; }
-.risk-label-mid  { color: #c05621; }
-.risk-label-high { color: #276749; }
-.risk-prob { font-family: 'DM Serif Display', serif; font-size: 3.5rem; line-height: 1; margin: 0.3rem 0; }
-.risk-prob-low  { color: #c53030; }
-.risk-prob-mid  { color: #c05621; }
-.risk-prob-high { color: #276749; }
-.risk-sublabel { font-size: 0.85rem; color: #718096; margin-top: 0.2rem; }
-.risk-obs { font-size: 0.9rem; margin-top: 1rem; padding-top: 0.8rem; border-top: 1px solid #e2e8f0; color: #4a5568; line-height: 1.6; }
+.factor-name {
+    flex: 0 0 200px;
+    font-size: 0.88rem;
+    color: #334155;
+}
+.factor-bar-wrap {
+    flex: 1;
+    background: #f1f5f9;
+    border-radius: 6px;
+    height: 8px;
+    overflow: hidden;
+}
+.factor-bar-against { background: #fca5a5; border-radius: 6px; height: 8px; }
+.factor-bar-favor   { background: #86efac; border-radius: 6px; height: 8px; }
+.factor-strength {
+    flex: 0 0 60px;
+    font-size: 0.78rem;
+    color: #94a3b8;
+    text-align: right;
+}
+
+/* Section header */
 .section-header {
-    font-family: 'DM Serif Display', serif;
-    color: #0f2b4a;
+    font-family: 'Instrument Serif', serif;
+    color: #1e293b;
     font-size: 1.3rem;
-    border-bottom: 2px solid #e3eafc;
+    border-bottom: 2px solid #e2e8f0;
     padding-bottom: 0.4rem;
     margin: 1.5rem 0 1rem;
 }
+
+/* Form labels */
 .form-group-label {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     font-weight: 600;
-    color: #1565c0;
+    color: #3b82f6;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     margin: 1.2rem 0 0.4rem;
 }
-.model-badge-pw {
-    display: inline-block;
-    background: #e3f2fd;
-    color: #0d47a1;
-    border-radius: 8px;
-    padding: 0.2rem 0.8rem;
-    font-size: 0.82rem;
-    font-weight: 600;
+
+/* Model badges */
+.badge-pw { display:inline-block; background:#eff6ff; color:#1d4ed8; border-radius:6px; padding:0.2rem 0.7rem; font-size:0.78rem; font-weight:600; }
+.badge-fv { display:inline-block; background:#f0fdf4; color:#15803d; border-radius:6px; padding:0.2rem 0.7rem; font-size:0.78rem; font-weight:600; }
+
+/* Info card */
+.info-card {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem 2rem;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+    margin-bottom: 1rem;
+}
+.info-card h3 {
+    font-family: 'Instrument Serif', serif;
+    color: #1e293b;
+    font-size: 1.05rem;
     margin-bottom: 0.5rem;
 }
-.model-badge-fv {
-    display: inline-block;
-    background: #e8f5e9;
-    color: #1b5e20;
-    border-radius: 8px;
-    padding: 0.2rem 0.8rem;
-    font-size: 0.82rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-}
-.disclaimer-box {
-    background: #fff8e1;
+
+/* Disclaimer */
+.disclaimer {
+    background: #fffbeb;
     border-radius: 12px;
     padding: 0.8rem 1.2rem;
-    color: #744210;
+    color: #92400e;
     font-size: 0.82rem;
     line-height: 1.6;
     margin-top: 1rem;
 }
+
 #MainMenu, footer { visibility: hidden; }
 </style>
 """, unsafe_allow_html=True)
@@ -285,10 +326,10 @@ def sigmoid(z):
 def assign_tier(p_cal, model_type="postwash"):
     if model_type == "postwash":
         lo, hi = PW_LOW_CUTOFF, PW_HIGH_CUTOFF
-        obs    = {"low": "4.6%", "mid": "10.0%", "high": "18.8%"}
+        obs    = {"low": "about 5 in 100", "mid": "about 10 in 100", "high": "about 19 in 100"}
     else:
         lo, hi = FV_LOW_CUTOFF, FV_HIGH_CUTOFF
-        obs    = {"low": "2.2%", "mid": "7.5%", "high": "11.2%"}
+        obs    = {"low": "about 2 in 100", "mid": "about 8 in 100", "high": "about 11 in 100"}
     if p_cal < lo:
         return "Low", "low", obs["low"]
     if p_cal < hi:
@@ -321,10 +362,9 @@ def compute_pw_features(df_raw):
         if df[c].isna().any():
             med = PW_MEDIANS.get(c, 0.0)
             df[c] = df[c].fillna(med)
-            imputed.append(f"{c} → {med}")
+            imputed.append(c)
     if imputed:
-        st.warning("Some missing values were filled with training set medians:\n" +
-                   "\n".join(f"- {x}" for x in imputed))
+        st.info(f"ℹ️ Missing values were filled automatically for: {', '.join(imputed)}")
     df["Total_Female_Pathology"]          = (df["Uterine_Factors"] + df["Tubal_Factors"] +
                                               df["Ovarian_Factors"] + df["Ovulatory_Factors"] +
                                               df["Cervical_Factors"] + df["Endometriosis_Factors"] +
@@ -347,10 +387,9 @@ def compute_fv_features(df_raw):
         if df[c].isna().any():
             med = FV_MEDIANS.get(c, 0.0)
             df[c] = df[c].fillna(med)
-            imputed.append(f"{c} → {med}")
+            imputed.append(c)
     if imputed:
-        st.warning("Some missing values were filled with training set medians:\n" +
-                   "\n".join(f"- {x}" for x in imputed))
+        st.info(f"ℹ️ Missing values were filled automatically for: {', '.join(imputed)}")
     df["Total_Female_Pathology"]          = (df["Uterine_Factors"] + df["Tubal_Factors"] +
                                               df["Ovarian_Factors"] + df["Ovulatory_Factors"] +
                                               df["Cervical_Factors"] + df["Endometriosis_Factors"] +
@@ -366,7 +405,8 @@ def predict(X, model_type="postwash"):
     p_cal = np.clip(calibrator.predict(p_raw), 0, 1)
     return p_cal
 
-def local_explain(X_row, model_type="postwash", top_k=6):
+def get_factors(X_row, model_type="postwash", top_k=5):
+    """Returns top factors split into against/favor lists with strength 0-1"""
     model, _ = load_model(model_type)
     xgb = model.named_steps["model"] if hasattr(model, "named_steps") else model
     explainer = shap.TreeExplainer(xgb)
@@ -378,21 +418,93 @@ def local_explain(X_row, model_type="postwash", top_k=6):
     if isinstance(base, (list, np.ndarray)):
         base = base[1] if len(np.ravel(base)) >= 2 else float(np.ravel(base)[0])
     base  = float(base)
-    order = np.argsort(np.abs(sv))[::-1][:min(top_k, len(sv))]
-    z, rows = base, []
+    order = np.argsort(np.abs(sv))[::-1]
+    z     = base
+    items = []
     for j in order:
         label    = get_display_name(X_row.columns[j], model_type)
         dz       = float(sv[j])
         p_before = sigmoid(z); z += dz; p_after = sigmoid(z)
         delta_pp = (p_after - p_before) * 100.0
-        arrow    = "↑" if delta_pp >= 0 else "↓"
-        direction = f"{arrow} Increases chance" if delta_pp >= 0 else f"{arrow} Decreases chance"
-        rows.append({
-            "Factor":    label,
-            "Effect":    direction,
-            "Impact":    f"{abs(delta_pp):.1f} percentage points",
-        })
-    return pd.DataFrame(rows)
+        items.append({"name": label, "delta": delta_pp})
+
+    against = [x for x in items if x["delta"] < 0]
+    favor   = [x for x in items if x["delta"] > 0]
+
+    # normalize strength within each group
+    def normalize(lst):
+        if not lst: return lst
+        max_abs = max(abs(x["delta"]) for x in lst)
+        for x in lst:
+            x["strength"] = abs(x["delta"]) / max_abs if max_abs > 0 else 0
+            if x["strength"] > 0.66:   x["label"] = "Strong"
+            elif x["strength"] > 0.33: x["label"] = "Moderate"
+            else:                       x["label"] = "Mild"
+        return lst
+
+    return normalize(against[:top_k]), normalize(favor[:top_k])
+
+def bar_html(width_pct, color):
+    return f'<div class="factor-bar-wrap"><div style="width:{width_pct:.0f}%; background:{color}; border-radius:6px; height:8px;"></div></div>'
+
+def render_factors(against, favor):
+    if against:
+        st.markdown(f"""
+        <div class="factor-section">
+            <div class="factor-section-title factor-title-against">
+                ↓ Factors reducing the chance of pregnancy
+            </div>
+        """, unsafe_allow_html=True)
+        for f in against:
+            w = f["strength"] * 100
+            st.markdown(f"""
+            <div class="factor-row">
+                <div class="factor-name">{f['name']}</div>
+                {bar_html(w, '#fca5a5')}
+                <div class="factor-strength">{f['label']}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    if favor:
+        st.markdown(f"""
+        <div class="factor-section">
+            <div class="factor-section-title factor-title-favor">
+                ↑ Factors supporting the chance of pregnancy
+            </div>
+        """, unsafe_allow_html=True)
+        for f in favor:
+            w = f["strength"] * 100
+            st.markdown(f"""
+            <div class="factor-row">
+                <div class="factor-name">{f['name']}</div>
+                {bar_html(w, '#86efac')}
+                <div class="factor-strength">{f['label']}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+def render_result(p_cal, model_type="postwash"):
+    tier_label, tier_key, obs = assign_tier(p_cal, model_type)
+    model_label = "🔬 Procedure-Day Model" if model_type == "postwash" else "🏥 Pre-treatment Model"
+    badge_class = "badge-pw" if model_type == "postwash" else "badge-fv"
+
+    st.markdown(f"""
+    <div class="result-wrap">
+        <div class="result-model-label"><span class="{badge_class}">{model_label}</span></div>
+        <div class="result-title">Estimated pregnancy probability this cycle</div>
+        <div class="result-number-{tier_key}">{p_cal:.1%}</div>
+        <div><span class="result-badge-{tier_key}">{tier_label} probability</span></div>
+        <div class="result-desc">
+            Among similar patients in the study cohort, <b>{obs} became pregnant per cycle</b>
+            in this probability group.
+        </div>
+    </div>
+    <div class="disclaimer">
+        This estimate is intended to support clinical counseling — not to replace it.
+        Always consider the full clinical picture when discussing outcomes with your patient.
+    </div>
+    """, unsafe_allow_html=True)
 
 def plot_shap_waterfall(X_row, model_type="postwash"):
     model, _ = load_model(model_type)
@@ -405,31 +517,6 @@ def plot_shap_waterfall(X_row, model_type="postwash"):
     shap.plots.waterfall(exp[0], max_display=10, show=False)
     plt.tight_layout()
     return fig
-
-def render_result(p_cal, model_type="postwash"):
-    tier_label, tier_key, obs_rate = assign_tier(p_cal, model_type)
-    badge_class = "model-badge-pw" if model_type == "postwash" else "model-badge-fv"
-    badge_text  = "🔬 Procedure-Day Model" if model_type == "postwash" else "🏥 Pre-treatment Model"
-
-    st.markdown(f'<span class="{badge_class}">{badge_text}</span>', unsafe_allow_html=True)
-    st.markdown(f"""
-    <div class="risk-{tier_key}">
-        <div class="risk-label risk-label-{tier_key}">{tier_label} Probability</div>
-        <div class="risk-prob risk-prob-{tier_key}">{p_cal:.1%}</div>
-        <div class="risk-sublabel">Estimated pregnancy probability per cycle</div>
-        <div class="risk-obs">
-            In the study cohort, patients in this group had an observed pregnancy rate of
-            <b>{obs_rate} per cycle</b>.
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("""
-    <div class="disclaimer-box">
-    This is a statistical estimate to support clinical counseling, not a guarantee of outcome.
-    Always interpret results in the context of the full clinical picture.
-    </div>
-    """, unsafe_allow_html=True)
 
 def build_pw_example():
     return pd.DataFrame([{
@@ -461,10 +548,12 @@ with st.sidebar:
     st.markdown("""
     <div style="text-align:center; padding-bottom:1.5rem;">
         <div style="font-size:2rem;">🔬</div>
-        <div style="font-family:'DM Serif Display',serif; font-size:1.2rem; color:white; line-height:1.3;">
+        <div style="font-family:'Instrument Serif',serif; font-size:1.25rem; color:#f1f5f9; line-height:1.4; margin-top:0.5rem;">
             IUI Pregnancy<br>Probability Tool
         </div>
-        <div style="font-size:0.75rem; color:#90caf9; margin-top:0.4rem;">Research prototype</div>
+        <div style="font-size:0.72rem; color:#94a3b8; margin-top:0.4rem; letter-spacing:0.05em;">
+            RESEARCH PROTOTYPE
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -476,7 +565,7 @@ with st.sidebar:
     ], label_visibility="collapsed")
 
     st.markdown("---")
-    st.markdown("<div style='font-size:0.78rem; color:#90caf9; margin-bottom:0.4rem;'>📥 Download CSV Templates</div>", unsafe_allow_html=True)
+    st.markdown("<div style='font-size:0.75rem; color:#94a3b8; margin-bottom:0.5rem; letter-spacing:0.05em;'>DOWNLOAD TEMPLATES</div>", unsafe_allow_html=True)
     st.download_button(
         "Procedure-Day Template",
         build_pw_example().to_csv(index=False).encode("utf-8"),
@@ -490,9 +579,8 @@ with st.sidebar:
         use_container_width=True
     )
     st.markdown("""
-    <div style="font-size:0.72rem; color:#90caf9; margin-top:1.5rem; line-height:1.6;">
-    For research use only.<br>
-    Not a clinical decision system.
+    <div style="font-size:0.72rem; color:#64748b; margin-top:1.5rem; line-height:1.7;">
+    For research use only.<br>Not a clinical decision system.
     </div>
     """, unsafe_allow_html=True)
 
@@ -501,16 +589,16 @@ with st.sidebar:
 # =============================
 
 if "Single" in page:
-    st.markdown('<div class="section-header">✏️ Single Patient Prediction</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">Single Patient Prediction</div>', unsafe_allow_html=True)
 
     model_choice = st.radio(
-        "Which model would you like to use?",
-        ["🔬 Procedure-Day Model — uses sperm wash results (day of IUI)",
-         "🏥 Pre-treatment Model — uses initial assessment only (before IUI)"],
+        "Select model:",
+        ["🔬 Procedure-Day Model — uses sperm wash results (available on day of IUI)",
+         "🏥 Pre-treatment Model — uses baseline data only (available before IUI begins)"],
         horizontal=False
     )
     model_type = "postwash" if "Procedure-Day" in model_choice else "first_visit"
-    st.caption("Fields left blank or set to 0 will be filled with population medians from the training cohort.")
+    st.caption("Any field left at 0 will be automatically filled with the population average from the training cohort.")
 
     with st.form("manual_form"):
         col1, col2 = st.columns(2)
@@ -564,7 +652,10 @@ if "Single" in page:
             else:
                 pre_count = pre_motile = post_count = post_tpmsc = post_motile = 0.0
 
-        submitted = st.form_submit_button("Calculate Pregnancy Probability", use_container_width=True, type="primary")
+        submitted = st.form_submit_button(
+            "Calculate Pregnancy Probability",
+            use_container_width=True, type="primary"
+        )
 
     if submitted:
         try:
@@ -604,25 +695,25 @@ if "Single" in page:
 
             render_result(float(p_cal[0]), model_type)
 
-            st.markdown('<div class="section-header">Key Factors Influencing This Result</div>', unsafe_allow_html=True)
-            expl = local_explain(X, model_type, top_k=6)
-            st.dataframe(expl, use_container_width=True, hide_index=True)
-            st.caption("Factors are ranked by how much they affect the predicted probability for this patient.")
+            st.markdown('<div class="section-header">What is influencing this result?</div>', unsafe_allow_html=True)
+            against, favor = get_factors(X, model_type, top_k=5)
+            render_factors(against, favor)
+            st.caption("Factors are specific to this patient's data and ranked by how strongly they affect the result.")
 
         except Exception as e:
             st.error(str(e))
 
 elif "Multiple" in page:
-    st.markdown('<div class="section-header">📂 Multiple Patients — Batch Prediction</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">Multiple Patients — Batch Prediction</div>', unsafe_allow_html=True)
 
     model_choice = st.radio(
-        "Which model would you like to use?",
+        "Select model:",
         ["🔬 Procedure-Day Model", "🏥 Pre-treatment Model"],
         horizontal=True
     )
     model_type = "postwash" if "Procedure-Day" in model_choice else "first_visit"
 
-    st.write("Upload a CSV file with one row per patient cycle. Download the template from the sidebar to see the required columns.")
+    st.write("Upload a CSV file with one row per patient cycle. Download the template from the sidebar for the correct column format.")
     uploaded = st.file_uploader("Upload CSV", type=["csv"], key="upl_calc")
 
     if uploaded is not None:
@@ -635,27 +726,28 @@ elif "Multiple" in page:
                 with st.spinner("Processing..."):
                     X      = compute_pw_features(df_raw) if model_type == "postwash" else compute_fv_features(df_raw)
                     p_cals = predict(X, model_type)
+                    tiers  = [assign_tier(float(p), model_type) for p in p_cals]
 
-                    out   = df_raw.copy()
-                    tiers = [assign_tier(float(p), model_type) for p in p_cals]
-                    out["Pregnancy probability (%)"]  = [f"{p:.1%}" for p in p_cals]
-                    out["Risk group"]                 = [t[0] for t in tiers]
-                    out["Observed rate (cohort)"]     = [t[2] for t in tiers]
+                    out = df_raw.copy()
+                    out["Pregnancy probability"] = [f"{p:.1%}" for p in p_cals]
+                    out["Risk group"]            = [t[0] for t in tiers]
 
                 st.success(f"Done — {len(out)} records processed")
 
                 from collections import Counter
                 counts = Counter([t[0] for t in tiers])
                 c1, c2, c3 = st.columns(3)
-                c1.metric("Low risk", counts.get("Low", 0))
-                c2.metric("Intermediate risk", counts.get("Intermediate", 0))
-                c3.metric("High risk", counts.get("High", 0))
+                c1.metric("🔴 Low risk", counts.get("Low", 0))
+                c2.metric("🟡 Intermediate risk", counts.get("Intermediate", 0))
+                c3.metric("🟢 High risk", counts.get("High", 0))
 
-                show_cols = ["Pregnancy probability (%)", "Risk group", "Observed rate (cohort)"]
-                st.dataframe(out[show_cols], use_container_width=True, hide_index=True)
+                st.dataframe(
+                    out[["Pregnancy probability", "Risk group"]],
+                    use_container_width=True, hide_index=True
+                )
 
                 st.download_button(
-                    "⬇️ Download Results",
+                    "⬇️ Download Full Results",
                     out.to_csv(index=False).encode("utf-8"),
                     "iui_predictions.csv", "text/csv",
                     use_container_width=True
@@ -664,11 +756,11 @@ elif "Multiple" in page:
                 st.error(str(e))
 
 elif "Detailed" in page:
-    st.markdown('<div class="section-header">🔍 Detailed Analysis — Single Row</div>', unsafe_allow_html=True)
-    st.write("Upload a CSV, select a row, and see a detailed breakdown of what factors drive the prediction.")
+    st.markdown('<div class="section-header">Detailed Analysis — Single Patient</div>', unsafe_allow_html=True)
+    st.write("Upload a CSV, select a row, and see a full breakdown of what is driving the prediction for that patient.")
 
     model_choice = st.radio(
-        "Which model?",
+        "Select model:",
         ["🔬 Procedure-Day Model", "🏥 Pre-treatment Model"],
         horizontal=True
     )
@@ -681,7 +773,7 @@ elif "Detailed" in page:
         st.dataframe(df_raw2.head(), use_container_width=True)
         row_idx = st.number_input("Select row to analyse", 0, max(0, len(df_raw2)-1), 0, 1)
 
-        if st.button("Analyse This Row", type="primary"):
+        if st.button("Analyse This Patient", type="primary"):
             try:
                 with st.spinner("Analysing..."):
                     X2    = compute_pw_features(df_raw2) if model_type == "postwash" else compute_fv_features(df_raw2)
@@ -690,13 +782,12 @@ elif "Detailed" in page:
 
                 render_result(float(p_cal[0]), model_type)
 
-                st.markdown('<div class="section-header">What is driving this result?</div>', unsafe_allow_html=True)
-                expl = local_explain(x_row, model_type, top_k=8)
-                st.dataframe(expl, use_container_width=True, hide_index=True)
-                st.caption("Factors ranked by their influence on this patient's predicted probability.")
+                st.markdown('<div class="section-header">What is influencing this result?</div>', unsafe_allow_html=True)
+                against, favor = get_factors(x_row, model_type, top_k=5)
+                render_factors(against, favor)
+                st.caption("Factors are specific to this patient's data and ranked by how strongly they affect the result.")
 
-                with st.expander("Show detailed SHAP chart"):
-                    st.caption("SHAP values reflect the model output before probability calibration.")
+                with st.expander("Show technical SHAP chart"):
                     try:
                         fig = plot_shap_waterfall(x_row, model_type)
                         st.pyplot(fig, use_container_width=True)
@@ -708,69 +799,66 @@ elif "Detailed" in page:
                 st.error(str(e))
 
 elif "About" in page:
-    st.markdown('<div class="section-header">ℹ️ About This Tool</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">About This Tool</div>', unsafe_allow_html=True)
 
     st.markdown("""
-    This tool provides per-cycle pregnancy probability estimates for patients undergoing
-    intrauterine insemination (IUI), based on a machine learning model trained on a
-    retrospective cohort from a Thai fertility center.
-
-    **Two models are available:**
+    This tool estimates the probability of clinical pregnancy per IUI cycle,
+    based on a machine learning model developed from a retrospective cohort
+    at a Thai fertility center. It is intended to support patient counseling
+    and clinical decision-making — not to replace it.
     """)
+
+    st.markdown('<div class="section-header">Which model should I use?</div>', unsafe_allow_html=True)
 
     col1, col2 = st.columns(2)
     with col1:
         st.markdown("""
-        <div class="result-card">
-            <span class="model-badge-pw">🔬 Procedure-Day Model</span>
-            <h3>When to use</h3>
-            <p style="color:#37474f; font-size:0.92rem; line-height:1.7;">
-            Use on the day of IUI, after sperm preparation results are available.
-            Incorporates postwash semen parameters for a more complete picture.
+        <div class="info-card">
+            <span class="badge-pw">🔬 Procedure-Day Model</span>
+            <h3>Use on the day of IUI</h3>
+            <p style="color:#475569; font-size:0.92rem; line-height:1.7;">
+            Requires sperm wash results. Use this model when postwash semen
+            parameters are available — it gives a more complete picture of
+            the cycle's chances.
             </p>
-            <h3>Key performance</h3>
-            <p style="color:#37474f; font-size:0.92rem; line-height:1.7;">
-            ROC-AUC 0.664 &nbsp;|&nbsp; NPV 97.8% &nbsp;|&nbsp; Sensitivity 90.1%
+            <p style="color:#94a3b8; font-size:0.85rem; margin-top:0.8rem;">
+            Sensitivity 90% &nbsp;·&nbsp; NPV 97.8%
             </p>
         </div>
         """, unsafe_allow_html=True)
 
     with col2:
         st.markdown("""
-        <div class="result-card">
-            <span class="model-badge-fv">🏥 Pre-treatment Model</span>
-            <h3>When to use</h3>
-            <p style="color:#37474f; font-size:0.92rem; line-height:1.7;">
-            Use at the initial consultation before IUI begins.
-            Requires only baseline clinical and semen parameters — no sperm wash results needed.
+        <div class="info-card">
+            <span class="badge-fv">🏥 Pre-treatment Model</span>
+            <h3>Use at the initial consultation</h3>
+            <p style="color:#475569; font-size:0.92rem; line-height:1.7;">
+            Requires only baseline clinical and semen parameters.
+            Use this model to counsel patients before IUI begins —
+            no sperm wash results needed.
             </p>
-            <h3>Key performance</h3>
-            <p style="color:#37474f; font-size:0.92rem; line-height:1.7;">
-            ROC-AUC 0.624 &nbsp;|&nbsp; NPV 97.8% &nbsp;|&nbsp; Sensitivity 90.2%
+            <p style="color:#94a3b8; font-size:0.85rem; margin-top:0.8rem;">
+            Sensitivity 90% &nbsp;·&nbsp; NPV 97.8%
             </p>
         </div>
         """, unsafe_allow_html=True)
 
-    st.markdown('<div class="section-header">Risk Groups</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">How to read the result</div>', unsafe_allow_html=True)
+    st.markdown("""
+    **The probability (%)** is the model's estimate of how likely this patient is
+    to achieve clinical pregnancy in this cycle.
 
-    tab1, tab2 = st.tabs(["🔬 Procedure-Day Model", "🏥 Pre-treatment Model"])
-    with tab1:
-        st.dataframe(pd.DataFrame({
-            "Risk group":           ["Low", "Intermediate", "High"],
-            "Probability range":    ["< 3.9%", "3.9–9.9%", "≥ 9.9%"],
-            "Cycles in test set":   [370, 211, 16],
-            "Observed pregnancies": [17, 21, 3],
-            "Observed rate":        ["4.6%", "10.0%", "18.8%"],
-        }), use_container_width=True, hide_index=True)
+    **The risk group** summarises where this patient falls compared to others in our cohort:
 
-    with tab2:
-        st.dataframe(pd.DataFrame({
-            "Risk group":           ["Low", "Intermediate", "High"],
-            "Probability range":    ["< 3.9%", "3.9–8.0%", "≥ 8.0%"],
-            "Cycles in test set":   [180, 265, 152],
-            "Observed pregnancies": [4, 20, 17],
-            "Observed rate":        ["2.2%", "7.5%", "11.2%"],
-        }), use_container_width=True, hide_index=True)
+    | Risk group | What it means |
+    |---|---|
+    | 🔴 Low | Pregnancy is less likely this cycle. In our cohort, about 5 in 100 similar patients became pregnant. |
+    | 🟡 Intermediate | Moderate chance. About 10 in 100 similar patients became pregnant. |
+    | 🟢 High | Higher chance. About 19 in 100 similar patients became pregnant. |
+
+    **The factors chart** shows which parameters are working for or against this patient —
+    bars show how strongly each factor is influencing the result.
+    """)
 
     with st.expander("Technical details — for researchers"):
         st.markdown("""
@@ -793,6 +881,8 @@ elif "About" in page:
         | Specificity | 32.9% (29.1–36.9%) | 31.7% (28.2–35.6%) |
         | NPV | 97.8% (95.5–99.5%) | 97.8% (95.2–99.5%) |
         | PPV | 9.0% (6.3–11.8%) | 8.9% (6.2–11.6%) |
+
+        Both models were tested on the same held-out test set.
         """)
 
         col_s1, col_s2 = st.columns(2)
@@ -810,10 +900,10 @@ elif "About" in page:
                 st.info("SHAP image not found.")
 
     st.markdown("""
-    <div class="disclaimer-box">
-    This tool is a research prototype for academic purposes only. It is intended to support clinical judgment
-    and should not be used as the sole basis for clinical decision-making. Outputs are statistical estimates
-    derived from a single-center retrospective cohort of IUI cycles performed at a Thai fertility center.
-    External validation in independent cohorts has not yet been performed.
+    <div class="disclaimer">
+    This tool is a research prototype for academic purposes only. It is intended to support
+    clinical judgment and should not be used as the sole basis for clinical decision-making.
+    Outputs are statistical estimates derived from a single-center retrospective cohort of
+    IUI cycles performed at a Thai fertility center. External validation has not yet been performed.
     </div>
     """, unsafe_allow_html=True)
