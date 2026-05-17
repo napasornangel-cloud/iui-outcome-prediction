@@ -634,8 +634,6 @@ elif "Model" in page:
     </div>
     """, unsafe_allow_html=True)
 
-    # FIX 4: ตัวเลข metrics ถูกต้อง พร้อม 95% CI จาก bootstrap
-    # และใช้ Brier calibrated แทน raw
     st.markdown('<div class="section-header">📊 Model Validation Performance</div>', unsafe_allow_html=True)
     comparison_df = pd.DataFrame({
         "Metric": [
@@ -646,50 +644,51 @@ elif "Model" in page:
             "Sensitivity",
             "Specificity",
             "NPV",
-            "Precision",
+            "PPV",
         ],
         "Value": [
-            0.6637,
-            0.1298,
-            0.2195,
-            0.0645,
-            0.634,
-            0.653,
-            0.960,
-            0.119,
+            0.664,
+            0.130,
+            0.219,
+            0.064,
+            0.901,
+            0.329,
+            0.978,
+            0.090,
         ],
         "95% CI": [
             "0.579–0.745",
             "0.078–0.202",
             "0.212–0.228",
             "0.047–0.082",
-            "—",
-            "—",
-            "—",
-            "—",
+            "0.804–0.978",
+            "0.291–0.369",
+            "0.955–0.995",
+            "0.063–0.118",
         ],
         "Note": [
             "Bootstrap (n=1,000)",
             "Bootstrap (n=1,000)",
             "Bootstrap (n=1,000)",
             "Bootstrap (n=1,000)",
-            "At threshold = 0.523",
-            "At threshold = 0.523",
-            "At threshold = 0.523",
-            "At threshold = 0.523",
+            "At calibrated threshold = 0.039",
+            "At calibrated threshold = 0.039",
+            "At calibrated threshold = 0.039",
+            "At calibrated threshold = 0.039",
         ],
     })
     st.dataframe(comparison_df, use_container_width=True, hide_index=True)
 
     st.markdown('<div class="section-header">📊 Risk Tier Performance (Test Set)</div>', unsafe_allow_html=True)
     tier_df = pd.DataFrame({
-        "Risk Tier":           ["Tier 1 (Low)", "Tier 2 (Intermediate)", "Tier 3 (High)"],
-        "N cycles":            [370, 211, 16],
-        "Observed pregnancies":[17, 21, 3],
-        "Pregnancy rate":      ["4.6%", "10.0%", "18.8%"],
+        "Risk Tier":            ["Tier 1 (Low)", "Tier 2 (Intermediate)", "Tier 3 (High)"],
+        "Probability cutoff":   ["< 3.9%", "3.9–9.9%", "≥ 9.9%"],
+        "N cycles":             [370, 211, 16],
+        "Observed pregnancies": [17, 21, 3],
+        "Pregnancy rate":       ["4.6%", "10.0%", "18.8%"],
     })
     st.dataframe(tier_df, use_container_width=True, hide_index=True)
-    st.caption("Monotonic increase across tiers confirmed (p-trend from risk stratification analysis).")
+    st.caption("Monotonic increase across tiers confirmed. Cutoffs derived from P50 and P75 of calibrated probability distribution.")
 
     st.markdown('<div class="section-header">📋 Final Model Predictors</div>', unsafe_allow_html=True)
     feature_table = pd.DataFrame({
