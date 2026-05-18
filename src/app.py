@@ -547,8 +547,11 @@ def render_cycle_history():
         ax.bar(labels, probs, color=[bcolors[e["tier_key"]] for e in st.session_state.cycle_history], width=0.5, zorder=3)
         ax.set_ylabel("Probability (%)", fontsize=9)
         ax.set_ylim(0, max(probs) * 1.6 + 1)
-        ax.axhline(PW_LOW_CUTOFF * 100, color="#94a3b8", linestyle="--", linewidth=0.8, alpha=0.5)
-        ax.axhline(PW_HIGH_CUTOFF * 100, color="#94a3b8", linestyle="--", linewidth=0.8, alpha=0.5)
+        last_model_type = st.session_state.cycle_history[-1]["model_type"]
+        ref_lo = PW_LOW_CUTOFF if last_model_type == "postwash" else FV_LOW_CUTOFF
+        ref_hi = PW_HIGH_CUTOFF if last_model_type == "postwash" else FV_HIGH_CUTOFF
+        ax.axhline(ref_lo * 100, color="#94a3b8", linestyle="--", linewidth=0.8, alpha=0.5)
+        ax.axhline(ref_hi * 100, color="#94a3b8", linestyle="--", linewidth=0.8, alpha=0.5)
         for spine in ["top", "right"]: ax.spines[spine].set_visible(False)
         ax.grid(axis="y", alpha=0.15)
         plt.tight_layout()
