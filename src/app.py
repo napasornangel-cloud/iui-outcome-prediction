@@ -811,35 +811,29 @@ elif "About" in page:
 
     with st.expander("Technical details — for researchers"):
         st.markdown("""
-        **Algorithm:** XGBoost with isotonic regression calibration
-
-        **Training cohort:** 2,348 IUI cycles | **Test cohort:** 597 cycles
-
-        **Split method:** Patient-level GroupShuffleSplit (80/20, seed 42)
-
-        **Event rate:** ~6.2% clinical pregnancy per cycle
-
-        **Validation:** Bootstrap 95% CI from 1,000 resamples
+        **Algorithm:** XGBoost with isotonic regression calibration  
+        **Cohort:** 2,945 cycles, 1,761 patients (single-center, Thailand)  
+        **Validation:** Patient-level holdout (80/20), bootstrap 95% CI (n=1,000)
 
         | Metric | Procedure-Day | Pre-treatment |
         |---|---|---|
         | ROC-AUC | 0.663 (0.570–0.742) | 0.625 (0.528–0.721) |
-        | PR-AUC | 0.162 (0.089–0.265) | 0.104 (0.070–0.162) |
-        | Brier (calibrated) | 0.063 (0.046–0.080) | 0.063 (0.046–0.081) |
         | Sensitivity | 61.1% (46.2–76.9%) | 65.9% (51.1–80.4%) |
-        | Specificity | 62.9% (59.0–66.9%) | 57.9% (53.7–62.1%) |
         | NPV | 95.6% (93.6–97.7%) | 95.8% (93.7–97.9%) |
-        | PPV | 10.9% (7.0–15.0%) | 10.3% (6.7–14.3%) |
-
-        Both models were tested on the same held-out test set.
         """)
         col_s1, col_s2 = st.columns(2)
         with col_s1:
             st.caption("Procedure-Day Model — SHAP")
-            st.image(str(PW_SHAP_IMG), use_container_width=True) if PW_SHAP_IMG.exists() else st.info("SHAP image not found.")
+            if PW_SHAP_IMG.exists():
+                st.image(str(PW_SHAP_IMG), use_container_width=True)
+            else:
+                st.info("SHAP image not found.")
         with col_s2:
             st.caption("Pre-treatment Model — SHAP")
-            st.image(str(FV_SHAP_IMG), use_container_width=True) if FV_SHAP_IMG.exists() else st.info("SHAP image not found.")
+            if FV_SHAP_IMG.exists():
+                st.image(str(FV_SHAP_IMG), use_container_width=True)
+            else:
+                st.info("SHAP image not found.")
 
     st.markdown("""<div class="disclaimer">
     This tool is a research prototype for academic purposes only. It is intended to support clinical judgment and should not be used as the sole basis for clinical decision-making. Outputs are statistical estimates derived from a single-center retrospective cohort of IUI cycles performed at a Thai fertility center. External validation has not yet been performed.
