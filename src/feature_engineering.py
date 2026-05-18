@@ -92,10 +92,18 @@ def add_binary_clinical_flags(df: pd.DataFrame) -> pd.DataFrame:
     data = df.copy()
 
     if "Post_TPMSC" in data.columns:
-        data["Low_TPMSC"] = (data["Post_TPMSC"] < 5).astype(int)
+        data["Low_TPMSC"] = np.where(
+            data["Post_TPMSC"].isna(),
+            np.nan,
+            (data["Post_TPMSC"] < 5).astype(float),
+        )
 
     if "Endometrium_Thickness" in data.columns:
-        data["Thin_Endometrium"] = (data["Endometrium_Thickness"] < 7).astype(int)
+        data["Thin_Endometrium"] = np.where(
+            data["Endometrium_Thickness"].isna(),
+            np.nan,
+            (data["Endometrium_Thickness"] < 7).astype(float),
+        )
 
     if "Age_Female" in data.columns:
         data["Advanced_Age"] = (data["Age_Female"] >= 38).astype(int)
