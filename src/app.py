@@ -840,7 +840,7 @@ elif "About" in page:
             <p style="color:#94a3b8; font-size:0.85rem; margin-top:0.8rem;">
             Sensitivity 65.9% &nbsp;·&nbsp; NPV 95.8%, unsafe_allow_html=True)
     st.markdown("""
-    **The probability (%)** is the model's estimate of how likely this patient is
+    **The probability (%)** is the model\'s estimate of how likely this patient is
     to achieve clinical pregnancy in this cycle.
 
     **The risk group** summarises where this patient falls compared to others in our cohort:
