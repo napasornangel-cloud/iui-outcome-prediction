@@ -543,7 +543,7 @@ def render_cycle_history():
         ax.set_facecolor("white")
         probs  = [e["p_cal"] * 100 for e in st.session_state.cycle_history]
         labels = [e["label"] for e in st.session_state.cycle_history]
-        bcolors = {"low": "#fc8181", "mid": "#f6ad55", "high": "#68d391"}
+        bcolors = {"low": "#d55e00", "mid": "#e69f00", "high": "#0072b2"}
         ax.bar(labels, probs, color=[bcolors[e["tier_key"]] for e in st.session_state.cycle_history], width=0.5, zorder=3)
         ax.set_ylabel("Probability (%)", fontsize=9)
         ax.set_ylim(0, max(probs) * 1.6 + 1)
