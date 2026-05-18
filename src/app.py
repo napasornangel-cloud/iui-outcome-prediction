@@ -250,10 +250,10 @@ def assign_tier(p_cal, model_type="postwash"):
         obs    = {"low": "about 4 in 100", "mid": "about 9 in 100", "high": "about 13 in 100"}
         obs_n  = {"low": 4, "mid": 9, "high": 13}
     if p_cal < lo:
-        return "Low", "low", obs["low"], obs_n["low"]
+        return "🔴 Low", "low", obs["low"], obs_n["low"]
     if p_cal < hi:
-        return "Intermediate", "mid", obs["mid"], obs_n["mid"]
-    return "High", "high", obs["high"], obs_n["high"]
+        return "🟡 Intermediate", "mid", obs["mid"], obs_n["mid"]
+    return "🔵 High", "high", obs["high"], obs_n["high"]
 
 def get_display_name(raw_name, model_type="postwash"):
     dm = PW_DISPLAY_MAP if model_type == "postwash" else FV_DISPLAY_MAP
