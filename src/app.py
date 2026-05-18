@@ -43,10 +43,10 @@ FV_FEATURES = [
 # =============================
 # Tier cutoffs
 # =============================
-PW_LOW_CUTOFF  = 0.038760
-PW_HIGH_CUTOFF = 0.099379
-FV_LOW_CUTOFF  = 0.039
-FV_HIGH_CUTOFF = 0.080
+PW_LOW_CUTOFF  = 0.045802
+PW_HIGH_CUTOFF = 0.100962
+FV_LOW_CUTOFF  = 0.036885
+FV_HIGH_CUTOFF = 0.098507
 
 # =============================
 # Display maps
@@ -326,10 +326,10 @@ def sigmoid(z):
 def assign_tier(p_cal, model_type="postwash"):
     if model_type == "postwash":
         lo, hi = PW_LOW_CUTOFF, PW_HIGH_CUTOFF
-        obs    = {"low": "about 5 in 100", "mid": "about 10 in 100", "high": "about 19 in 100"}
+        obs    = {"low": "about 4 in 100", "mid": "about 10 in 100", "high": "about 18 in 100"}
     else:
         lo, hi = FV_LOW_CUTOFF, FV_HIGH_CUTOFF
-        obs    = {"low": "about 2 in 100", "mid": "about 8 in 100", "high": "about 11 in 100"}
+        obs    = {"low": "about 4 in 100", "mid": "about 9 in 100", "high": "about 13 in 100"}
     if p_cal < lo:
         return "Low", "low", obs["low"]
     if p_cal < hi:
@@ -822,7 +822,7 @@ elif "About" in page:
             the cycle's chances.
             </p>
             <p style="color:#94a3b8; font-size:0.85rem; margin-top:0.8rem;">
-            Sensitivity 90% &nbsp;·&nbsp; NPV 97.8%
+            Sensitivity 61.1% &nbsp;·&nbsp; NPV 95.6%
             </p>
         </div>
         """, unsafe_allow_html=True)
@@ -838,12 +838,7 @@ elif "About" in page:
             no sperm wash results needed.
             </p>
             <p style="color:#94a3b8; font-size:0.85rem; margin-top:0.8rem;">
-            Sensitivity 90% &nbsp;·&nbsp; NPV 97.8%
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown('<div class="section-header">How to read the result</div>', unsafe_allow_html=True)
+            Sensitivity 65.9% &nbsp;·&nbsp; NPV 95.8%, unsafe_allow_html=True)
     st.markdown("""
     **The probability (%)** is the model's estimate of how likely this patient is
     to achieve clinical pregnancy in this cycle.
@@ -852,9 +847,9 @@ elif "About" in page:
 
     | Risk group | What it means |
     |---|---|
-    | 🔴 Low | Pregnancy is less likely this cycle. In our cohort, about 5 in 100 similar patients became pregnant. |
+    | 🔴 Low | Pregnancy is less likely this cycle. In our cohort, about 4 in 100 similar patients became pregnant. |
     | 🟡 Intermediate | Moderate chance. About 10 in 100 similar patients became pregnant. |
-    | 🟢 High | Higher chance. About 19 in 100 similar patients became pregnant. |
+    | 🟢 High | Higher chance. About 18 in 100 similar patients became pregnant. |
 
     **The factors chart** shows which parameters are working for or against this patient —
     bars show how strongly each factor is influencing the result.
@@ -874,13 +869,13 @@ elif "About" in page:
 
         | Metric | Procedure-Day | Pre-treatment |
         |---|---|---|
-        | ROC-AUC | 0.664 (0.579–0.745) | 0.624 (0.542–0.707) |
-        | PR-AUC | 0.130 (0.078–0.202) | 0.096 (0.064–0.145) |
-        | Brier (calibrated) | 0.064 (0.047–0.082) | 0.065 (0.048–0.082) |
-        | Sensitivity | 90.1% (80.4–97.8%) | 90.2% (80.4–97.8%) |
-        | Specificity | 32.9% (29.1–36.9%) | 31.7% (28.2–35.6%) |
-        | NPV | 97.8% (95.5–99.5%) | 97.8% (95.2–99.5%) |
-        | PPV | 9.0% (6.3–11.8%) | 8.9% (6.2–11.6%) |
+        | ROC-AUC | 0.663 (0.570–0.742) | 0.625 (0.528–0.721) |
+        | PR-AUC | 0.162 (0.089–0.265) | 0.104 (0.070–0.162) |
+        | Brier (calibrated) | 0.063 (0.046–0.080) | 0.063 (0.047–0.081) |
+        | Sensitivity | 61.1% (46.2–76.9%) | 65.9% (51.1–80.4%) |
+        | Specificity | 62.9% (59.0–66.9%) | 57.9% (53.7–62.1%) |
+        | NPV | 95.6% (93.6–97.7%) | 95.8% (93.7–97.9%) |
+        | PPV | 10.9% (7.0–15.0%) | 10.3% (6.7–14.3%) |
 
         Both models were tested on the same held-out test set.
         """)
