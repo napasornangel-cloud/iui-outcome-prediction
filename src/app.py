@@ -811,6 +811,7 @@ elif "About" in page:
     st.markdown('<div class="section-header">Which model should I use?</div>', unsafe_allow_html=True)
 
     col1, col2 = st.columns(2)
+
     with col1:
         st.markdown("""
         <div class="info-card">
@@ -838,18 +839,24 @@ elif "About" in page:
             no sperm wash results needed.
             </p>
             <p style="color:#94a3b8; font-size:0.85rem; margin-top:0.8rem;">
-            Sensitivity 65.9% &nbsp;·&nbsp; NPV 95.8%, unsafe_allow_html=True)
+            Sensitivity 65.9% &nbsp;·&nbsp; NPV 95.8%
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown('<div class="section-header">How should I interpret the result?</div>', unsafe_allow_html=True)
+
     st.markdown("""
-    **The probability (%)** is the model\'s estimate of how likely this patient is
+    **The probability (%)** is the model's estimate of how likely this patient is
     to achieve clinical pregnancy in this cycle.
 
-    **The risk group** summarises where this patient falls compared to others in our cohort:
+    **The probability group** summarises where this patient falls compared to others in our cohort:
 
-    | Risk group | What it means |
+    | Probability group | What it means |
     |---|---|
-    | 🔴 Low | Pregnancy is less likely this cycle. In our cohort, about 4 in 100 similar patients became pregnant. |
-    | 🟡 Intermediate | Moderate chance. About 10 in 100 similar patients became pregnant. |
-    | 🟢 High | Higher chance. About 18 in 100 similar patients became pregnant. |
+    | 🔴 Low probability | Pregnancy is less likely this cycle. In our cohort, about 4 in 100 similar patients became pregnant. |
+    | 🟡 Intermediate probability | Moderate chance. About 9–10 in 100 similar patients became pregnant. |
+    | 🟢 High probability | Higher chance. About 13–18 in 100 similar patients became pregnant. |
 
     **The factors chart** shows which parameters are working for or against this patient —
     bars show how strongly each factor is influencing the result.
@@ -859,13 +866,14 @@ elif "About" in page:
         st.markdown("""
         **Algorithm:** XGBoost with isotonic regression calibration
 
-        **Training cohort:** 2,348 IUI cycles | **Test cohort:** 597 cycles
+        **Training cohort:** 2,348 IUI cycles  
+        **Test cohort:** 597 cycles
 
         **Split method:** Patient-level GroupShuffleSplit (80/20, seed 42)
 
         **Event rate:** ~6.2% clinical pregnancy per cycle
 
-        **Validation:** Bootstrap 95% CI from 1,000 resamples
+        **Validation:** Bootstrap 95% confidence intervals from 1,000 resamples
 
         | Metric | Procedure-Day | Pre-treatment |
         |---|---|---|
@@ -881,12 +889,14 @@ elif "About" in page:
         """)
 
         col_s1, col_s2 = st.columns(2)
+
         with col_s1:
             st.caption("Procedure-Day Model — SHAP")
             if PW_SHAP_IMG.exists():
                 st.image(str(PW_SHAP_IMG), use_container_width=True)
             else:
                 st.info("SHAP image not found.")
+
         with col_s2:
             st.caption("Pre-treatment Model — SHAP")
             if FV_SHAP_IMG.exists():
@@ -896,9 +906,13 @@ elif "About" in page:
 
     st.markdown("""
     <div class="disclaimer">
-    This tool is a research prototype for academic purposes only. It is intended to support
-    clinical judgment and should not be used as the sole basis for clinical decision-making.
-    Outputs are statistical estimates derived from a single-center retrospective cohort of
-    IUI cycles performed at a Thai fertility center. External validation has not yet been performed.
+    This tool is a research prototype for academic purposes only.
+    It is intended to support clinical judgment and should not be used
+    as the sole basis for clinical decision-making.
+
+    Outputs are statistical estimates derived from a single-center retrospective cohort
+    of IUI cycles performed at a Thai fertility center.
+
+    External validation has not yet been performed.
     </div>
     """, unsafe_allow_html=True)
