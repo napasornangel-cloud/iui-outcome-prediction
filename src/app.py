@@ -253,7 +253,7 @@ def assign_tier(p_cal, model_type="postwash"):
         return "🔴 Low", "low", obs["low"], obs_n["low"]
     if p_cal < hi:
         return "🟡 Intermediate", "mid", obs["mid"], obs_n["mid"]
-    return "🔵 High", "high", obs["high"], obs_n["high"]
+    return "🟢 High", "high", obs["high"], obs_n["high"]
 
 def get_display_name(raw_name, model_type="postwash"):
     dm = PW_DISPLAY_MAP if model_type == "postwash" else FV_DISPLAY_MAP
@@ -735,11 +735,11 @@ elif "Multiple" in page:
                     out["Risk group"]            = [t[0] for t in tiers]
                 st.success(f"Done — {len(out)} records processed")
                 from collections import Counter
-                counts = Counter([t[0] for t in tiers])
+                counts = Counter([t[1] for t in tiers])
                 c1, c2, c3 = st.columns(3)
-                c1.metric("🔴 Low", counts.get("Low",0))
-                c2.metric("🟡 Intermediate", counts.get("Intermediate",0))
-                c3.metric("🟢 High", counts.get("High",0))
+                c1.metric("🔴 Low",          counts.get("low", 0))
+                c2.metric("🟡 Intermediate", counts.get("mid", 0))
+                c3.metric("🟢 High",         counts.get("high", 0))
                 st.dataframe(out[["Pregnancy probability","Risk group"]], use_container_width=True, hide_index=True)
                 st.download_button("⬇️ Download Full Results", out.to_csv(index=False).encode("utf-8"),
                                    "iui_predictions.csv","text/csv", use_container_width=True)
