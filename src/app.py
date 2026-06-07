@@ -250,10 +250,10 @@ def assign_tier(p_cal, model_type="postwash"):
         obs    = {"low": "about 4 in 100", "mid": "about 9 in 100", "high": "about 13 in 100"}
         obs_n  = {"low": 4, "mid": 9, "high": 13}
     if p_cal < lo:
-        return "🔴 Low", "low", obs["low"], obs_n["low"]
+        return "🔴 Low Probability", "low", obs["low"], obs_n["low"]
     if p_cal < hi:
-        return "🟡 Intermediate", "mid", obs["mid"], obs_n["mid"]
-    return "🟢 High", "high", obs["high"], obs_n["high"]
+        return "🟡 Intermediate Probability", "mid", obs["mid"], obs_n["mid"]
+    return "🟢 High Probability", "high", obs["high"], obs_n["high"]
 
 def get_display_name(raw_name, model_type="postwash"):
     dm = PW_DISPLAY_MAP if model_type == "postwash" else FV_DISPLAY_MAP
@@ -392,7 +392,7 @@ def render_result(p_cal, model_type="postwash"):
     st.markdown(f"""
     <div class="risk-{tier_key}">
         <div style="margin-bottom:0.8rem;"><span class="{badge_class}">{badge_text}</span></div>
-        <div class="risk-group-label risk-group-label-{tier_key}">{tier_label} Probability</div>
+        <div class="risk-group-label risk-group-label-{tier_key}">{tier_label}</div>
         <div class="risk-prob risk-prob-{tier_key}">{p_cal:.1%}</div>
         <div class="risk-sub">estimated pregnancy probability per cycle</div>
     </div>
@@ -463,7 +463,7 @@ def generate_pdf_report(p_cal, model_type, against, favor, patient_id=""):
         story += [Paragraph(f"Patient / Cycle reference: {patient_id}", body_s), Spacer(1, 6)]
 
     result_table = Table([
-        [Paragraph(f"<b>{tier_label} Probability</b>", tier_s), Paragraph(f"<b>{p_cal:.1%}</b>", prob_s)],
+        [Paragraph(f"<b>{tier_label}</b>", tier_s), Paragraph(f"<b>{p_cal:.1%}</b>", prob_s)],
         [Paragraph("estimated pregnancy probability per cycle", ps_s),
          Paragraph(f"Among similar patients: <b>{obs} became pregnant</b>", co_s)],
     ], colWidths=[9*cm, 8*cm])
@@ -535,7 +535,7 @@ def render_cycle_history():
             <div class="cycle-card cycle-card-{entry['tier_key']}">
                 <div style="font-size:0.72rem; color:#94a3b8; margin-bottom:4px;">{badge} {entry['label']} · {entry['timestamp']}</div>
                 <div style="font-family:'DM Serif Display',serif; font-size:2rem; color:{prob_color};">{entry['p_cal']:.1%}</div>
-                <div style="font-size:0.78rem; color:#718096;">{entry['tier_label']} probability</div>
+                <div style="font-size:0.78rem; color:#718096;">{entry['tier_label']}</div>
             </div>""", unsafe_allow_html=True)
 
     if len(st.session_state.cycle_history) > 1:
@@ -732,15 +732,15 @@ elif "Multiple" in page:
                     tiers  = [assign_tier(float(p), model_type) for p in p_cals]
                     out    = df_raw.copy()
                     out["Pregnancy probability"] = [f"{p:.1%}" for p in p_cals]
-                    out["Risk group"]            = [t[0] for t in tiers]
+                    out["Pregnancy Probability Tier"] = [t[0] for t in tiers]
                 st.success(f"Done — {len(out)} records processed")
                 from collections import Counter
                 counts = Counter([t[1] for t in tiers])
                 c1, c2, c3 = st.columns(3)
-                c1.metric("🔴 Low",          counts.get("low", 0))
-                c2.metric("🟡 Intermediate", counts.get("mid", 0))
-                c3.metric("🟢 High",         counts.get("high", 0))
-                st.dataframe(out[["Pregnancy probability","Risk group"]], use_container_width=True, hide_index=True)
+                c1.metric("🔴 Low Probability", counts.get("low", 0))
+                c2.metric("🟡 Intermediate Probability", counts.get("mid", 0))
+                c3.metric("🟢 High Probability", counts.get("high", 0))
+                st.dataframe(out[["Pregnancy probability", "Pregnancy Probability Tier"]], use_container_width=True, hide_index=True)
                 st.download_button("⬇️ Download Full Results", out.to_csv(index=False).encode("utf-8"),
                                    "iui_predictions.csv","text/csv", use_container_width=True)
             except Exception as e:
@@ -801,13 +801,13 @@ elif "About" in page:
     st.markdown("""
     **The probability (%)** is the model's estimate of how likely this patient is to achieve clinical pregnancy in this cycle.
 
-    **The risk group** shows where this patient falls compared to similar patients in our cohort:
+    **The pregnancy probability tier** shows where this patient falls compared to similar patients in our cohort:
 
-    | Risk group | What it means |
+    | Pregnancy probability tier | What it means |
     |---|---|
-    | 🔴 Low | About 4 in 100 similar patients became pregnant per cycle |
-    | 🟡 Intermediate | About 9–10 in 100 similar patients became pregnant per cycle |
-    | 🟢 High | About 13–18 in 100 similar patients became pregnant per cycle |
+    | 🔴 Low Probability | About 4 in 100 similar patients became pregnant per cycle |
+    | 🟡 Intermediate Probability | About 9–10 in 100 similar patients became pregnant per cycle |
+    | 🟢 High Probability | About 13–18 in 100 similar patients became pregnant per cycle |
 
     **The factors chart** shows which parameters are working for or against this patient. Bars show how strongly each factor influences the result — Strong, Moderate, or Mild.
     """)
