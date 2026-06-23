@@ -606,52 +606,107 @@ with st.sidebar:
 if "Single" in page:
     st.markdown('<div class="section-header">✏️ Single Patient Prediction</div>', unsafe_allow_html=True)
     model_choice = st.radio("Which model would you like to use?",
-        ["🔬 Procedure-Day Model — uses sperm wash results (day of IUI)",
+        ["🔬 Procedure-Day Model — 16 features (recommended final model)",
          "🏥 Pre-treatment Model — uses baseline data only (before IUI begins)"])
-    model_type = "postwash" if "Procedure-Day" in model_choice else "first_visit"
-    st.caption("Any field left at 0 will be automatically filled with the population median from the training cohort.")
+    if "Procedure-Day" in model_choice:
+        model_type = "postwash"
+    else:
+        model_type = "first_visit"
+
+    if model_type == "postwash":
+        st.caption("Recommended final model. This 16-feature model was selected because it showed comparable performance to the full-feature model, while requiring fewer clinical inputs.")
+    else:
+        st.caption("Pre-treatment model. This form uses baseline clinical and initial semen parameters before IUI begins.")
 
     with st.form("manual_form"):
         col1, col2 = st.columns(2)
-        with col1:
-            st.markdown('<div class="form-group-label">Female Factors</div>', unsafe_allow_html=True)
-            age_female              = st.number_input("Age (years)", 18.0, 55.0, 35.0, 1.0)
-            bmi                     = st.number_input("BMI (kg/m2)", 10.0, 60.0, 21.7, 0.1)
-            menstrual_interval_days = st.number_input("Menstrual cycle length (days)", 15.0, 180.0, 29.0, 1.0)
-            infertility_type        = st.selectbox("Infertility type", [0,1],
-                                        format_func=lambda x: "Primary — no prior pregnancy" if x==0 else "Secondary — prior pregnancy")
-            infertile_duration      = st.number_input("Duration of infertility (months)", 0.0, 360.0, 36.0, 1.0)
-            cycle_day = st.number_input("IUI cycle day", 1.0, 40.0, 14.0, 1.0) if model_type == "postwash" else 14.0
-            st.markdown('<div class="form-group-label">Female Pathology (0 = absent, 1 = present)</div>', unsafe_allow_html=True)
-            c1a, c1b = st.columns(2)
-            with c1a:
-                uterine_factors     = st.selectbox("Uterine",   [0,1])
-                ovarian_factors     = st.selectbox("Ovarian",   [0,1])
-                cervical_factors    = st.selectbox("Cervical",  [0,1])
-                multisystem_factors = st.selectbox("Multisystem",[0,1])
-            with c1b:
-                tubal_factors         = st.selectbox("Tubal",          [0,1])
-                ovulatory_factors     = st.selectbox("Ovulatory",      [0,1])
-                endometriosis_factors = st.selectbox("Endometriosis",  [0,1])
-                gyn_surgery           = st.selectbox("Prior gyn. surgery",[0,1])
-        with col2:
-            st.markdown('<div class="form-group-label">Initial Semen Analysis</div>', unsafe_allow_html=True)
-            first_volume      = st.number_input("Volume (mL)",            0.0, 20.0,  3.0,  0.1)
-            first_count       = st.number_input("Sperm count (x10^6/mL)", 0.0,500.0, 41.3, 0.1)
-            first_motile      = st.number_input("Total motility (%)",      0.0,100.0, 54.7, 0.1)
-            first_prog_motile = st.number_input("Progressive motility (%)",0.0,100.0, 52.6, 0.1)
-            if model_type == "postwash":
+
+        # Defaults for variables not shown in model-specific forms
+        bmi = 21.7
+        infertility_type = 0
+        infertile_duration = 36.0
+        cycle_day = 14.0
+        uterine_factors = tubal_factors = ovarian_factors = ovulatory_factors = 0
+        cervical_factors = endometriosis_factors = multisystem_factors = 0
+        gyn_surgery = 0
+        total_female_pathology = 0.0
+        first_volume = 3.0
+        first_count = 41.3
+        first_motile = 54.7
+        first_prog_motile = 52.6
+        pre_count = 42.6
+        pre_motile = 57.6
+        post_count = 22.2
+        post_tpmsc = 10.6
+        post_motile = 96.93
+
+        if model_type == "postwash":
+            with col1:
+                st.markdown('<div class="form-group-label">Female Factors</div>', unsafe_allow_html=True)
+                age_female = st.number_input("Age (years)", 18.0, 55.0, 35.0, 1.0)
+                bmi = st.number_input("BMI (kg/m²)", 10.0, 60.0, 21.7, 0.1)
+                infertility_type = st.selectbox("Infertility type", [0, 1],
+                    format_func=lambda x: "Primary — no prior pregnancy" if x == 0 else "Secondary — prior pregnancy")
+                menstrual_interval_days = st.number_input("Menstrual cycle length (days)", 15.0, 180.0, 29.0, 1.0)
+                cycle_day = st.number_input("IUI cycle day", 1.0, 40.0, 14.0, 1.0)
+
+                st.markdown('<div class="form-group-label">Female Pathology</div>', unsafe_allow_html=True)
+                uterine_factors = st.selectbox("Uterine factor", [0, 1])
+                ovulatory_factors = st.selectbox("Ovulatory factor", [0, 1])
+                gyn_surgery = st.selectbox("Prior gynecologic surgery", [0, 1])
+                total_female_pathology = st.number_input(
+                    "Total female pathology score",
+                    0.0, 7.0, float(uterine_factors + ovulatory_factors), 1.0,
+                    help="Total number of female pathology factors recorded for this patient."
+                )
+
+            with col2:
+                st.markdown('<div class="form-group-label">Initial Semen Analysis</div>', unsafe_allow_html=True)
+                first_volume = st.number_input("Volume (mL)", 0.0, 20.0, 3.0, 0.1)
+                first_count = st.number_input("Sperm concentration (×10⁶/mL)", 0.0, 500.0, 41.3, 0.1)
+                first_prog_motile = st.number_input("Progressive motility (%)", 0.0, 100.0, 52.6, 0.1)
+
                 st.markdown('<div class="form-group-label">Prewash Semen</div>', unsafe_allow_html=True)
-                pre_count  = st.number_input("Sperm count (x10^6/mL) ", 0.0,500.0, 42.6, 0.1)
-                pre_motile = st.number_input("Total motility (%) ",      0.0,100.0, 57.6, 0.1)
+                pre_count = st.number_input("Prewash sperm concentration (×10⁶/mL)", 0.0, 500.0, 42.6, 0.1)
+                pre_motile = st.number_input("Prewash total motility (%)", 0.0, 100.0, 57.6, 0.1)
+
                 st.markdown('<div class="form-group-label">Postwash Semen</div>', unsafe_allow_html=True)
-                post_count  = st.number_input("Sperm count (x10^6/mL)  ",0.0,500.0, 22.2,  0.1)
-                post_tpmsc  = st.number_input("TPMSC (x10^6)",            0.0,500.0, 10.6,  0.1)
-                post_motile = st.number_input("Total motility (%)  ",     0.0,100.0, 96.93, 0.1)
-            else:
-                pre_count = pre_motile = post_count = post_tpmsc = post_motile = 0.0
+                post_count = st.number_input("Postwash sperm count (×10⁶/mL)", 0.0, 500.0, 22.2, 0.1)
+                post_tpmsc = st.number_input("Postwash TPMSC (×10⁶)", 0.0, 500.0, 10.6, 0.1)
+                post_motile = st.number_input("Postwash total motility (%)", 0.0, 100.0, 96.93, 0.1)
+
+        else:
+            with col1:
+                st.markdown('<div class="form-group-label">Female Factors</div>', unsafe_allow_html=True)
+                age_female = st.number_input("Age (years)", 18.0, 55.0, 35.0, 1.0)
+                bmi = st.number_input("BMI (kg/m²)", 10.0, 60.0, 21.7, 0.1)
+                infertility_type = st.selectbox("Infertility type", [0, 1],
+                    format_func=lambda x: "Primary — no prior pregnancy" if x == 0 else "Secondary — prior pregnancy")
+                infertile_duration = st.number_input("Duration of infertility (months)", 0.0, 360.0, 36.0, 1.0)
+                menstrual_interval_days = st.number_input("Menstrual cycle length (days)", 15.0, 180.0, 29.0, 1.0)
+
+                st.markdown('<div class="form-group-label">Female Pathology</div>', unsafe_allow_html=True)
+                uterine_factors = st.selectbox("Uterine factor", [0, 1])
+                ovulatory_factors = st.selectbox("Ovulatory factor", [0, 1])
+                tubal_factors = st.selectbox("Tubal factor", [0, 1])
+                endometriosis_factors = st.selectbox("Endometriosis", [0, 1])
+                gyn_surgery = st.selectbox("Prior gynecologic surgery", [0, 1])
+                total_female_pathology = st.number_input(
+                    "Total female pathology score",
+                    0.0, 7.0,
+                    float(uterine_factors + ovulatory_factors + tubal_factors + endometriosis_factors),
+                    1.0,
+                    help="Total number of female pathology factors recorded for this patient."
+                )
+
+            with col2:
+                st.markdown('<div class="form-group-label">Initial Semen Analysis</div>', unsafe_allow_html=True)
+                first_volume = st.number_input("Volume (mL)", 0.0, 20.0, 3.0, 0.1)
+                first_count = st.number_input("Sperm concentration (×10⁶/mL)", 0.0, 500.0, 41.3, 0.1)
+                first_prog_motile = st.number_input("Progressive motility (%)", 0.0, 100.0, 52.6, 0.1)
+
         cycle_label = st.text_input("Cycle label (optional)", placeholder="e.g. Cycle 1, Jan 2025")
-        submitted   = st.form_submit_button("Calculate Pregnancy Probability", use_container_width=True, type="primary")
+        submitted = st.form_submit_button("Calculate Pregnancy Probability", use_container_width=True, type="primary")
 
     if submitted:
         raw_inputs = {
@@ -665,7 +720,7 @@ if "Single" in page:
             "Post_Count": post_count if model_type == "postwash" else None,
             "Post_TPMSC": post_tpmsc if model_type == "postwash" else None,
             "Post_Motile": post_motile if model_type == "postwash" else None,
-            "Total_infertile_duration": infertile_duration,
+            "Total_infertile_duration": infertile_duration if model_type == "first_visit" else None,
         }
         for w in validate_inputs({k: v for k, v in raw_inputs.items() if v is not None}):
             st.markdown(f'<div class="val-warn">⚠️ Value out of expected range — {w}</div>', unsafe_allow_html=True)
@@ -673,28 +728,43 @@ if "Single" in page:
         try:
             with st.spinner("Calculating..."):
                 if model_type == "postwash":
-                    raw_df = pd.DataFrame([{
-                        "Uterine_Factors":uterine_factors,"Tubal_Factors":tubal_factors,
-                        "Ovarian_Factors":ovarian_factors,"Ovulatory_Factors":ovulatory_factors,
-                        "Cervical_Factors":cervical_factors,"Endometriosis_Factors":endometriosis_factors,
-                        "Multisystem_Factors":multisystem_factors,"Cycle_Day":cycle_day,
-                        "Post_TPMSC":post_tpmsc,"First_Count":first_count,"Pre_Count":pre_count,
-                        "Gynecological_Surgical_History":gyn_surgery,"Post_Count":post_count,
-                        "Post_Motile":post_motile,"Pre_Motile":pre_motile,"Age_Female":age_female,
-                        "First_Progressive_Motile":first_prog_motile,"First_Volume":first_volume,
-                        "Menstrual_Interval_Days":menstrual_interval_days,"First_Motile":first_motile,
-                        "Body_Mass_Index":bmi,"Infertility_Type":infertility_type}])
-                    X = compute_pw_features(raw_df)
+                    X = pd.DataFrame([{
+                        "Uterine_Factors": uterine_factors,
+                        "Total_Female_Pathology": total_female_pathology,
+                        "Ovulatory_Factors": ovulatory_factors,
+                        "Cycle_Day": cycle_day,
+                        "First_Count": first_count,
+                        "Pre_Count": pre_count,
+                        "Post_TPMSC": post_tpmsc,
+                        "Gynecological_Surgical_History": gyn_surgery,
+                        "Delta_Motile": post_motile - pre_motile,
+                        "Age_Female": age_female,
+                        "First_Volume": first_volume,
+                        "Post_Count": post_count,
+                        "Menstrual_Interval_Days": menstrual_interval_days,
+                        "First_Progressive_Motile": first_prog_motile,
+                        "First_TPMSC": min(first_volume * first_count * first_prog_motile / 100, 200),
+                        "BMI_InfertilityType_Interaction": bmi * infertility_type,
+                    }])[PW_FEATURES].copy()
                 else:
-                    raw_df = pd.DataFrame([{
-                        "Age_Female":age_female,"Body_Mass_Index":bmi,"Infertility_Type":infertility_type,
-                        "Total_infertile_duration":infertile_duration,"Menstrual_Interval_Days":menstrual_interval_days,
-                        "Uterine_Factors":uterine_factors,"Tubal_Factors":tubal_factors,"Ovarian_Factors":ovarian_factors,
-                        "Ovulatory_Factors":ovulatory_factors,"Cervical_Factors":cervical_factors,
-                        "Endometriosis_Factors":endometriosis_factors,"Multisystem_Factors":multisystem_factors,
-                        "Gynecological_Surgical_History":gyn_surgery,"First_Volume":first_volume,
-                        "First_Count":first_count,"First_Progressive_Motile":first_prog_motile}])
-                    X = compute_fv_features(raw_df)
+                    X = pd.DataFrame([{
+                        "Age_Female": age_female,
+                        "Body_Mass_Index": bmi,
+                        "Infertility_Type": infertility_type,
+                        "Total_infertile_duration": infertile_duration,
+                        "Menstrual_Interval_Days": menstrual_interval_days,
+                        "Uterine_Factors": uterine_factors,
+                        "Ovulatory_Factors": ovulatory_factors,
+                        "Tubal_Factors": tubal_factors,
+                        "Endometriosis_Factors": endometriosis_factors,
+                        "Gynecological_Surgical_History": gyn_surgery,
+                        "Total_Female_Pathology": total_female_pathology,
+                        "First_Volume": first_volume,
+                        "First_Count": first_count,
+                        "First_Progressive_Motile": first_prog_motile,
+                        "First_TPMSC": min(first_volume * first_count * first_prog_motile / 100, 200),
+                        "BMI_InfertilityType_Interaction": bmi * infertility_type,
+                    }])[FV_FEATURES].copy()
 
                 p_val = float(predict(X, model_type)[0])
                 against, favor = get_factors(X, model_type, top_k=5)
@@ -782,32 +852,60 @@ elif "Detailed" in page:
 
 elif "About" in page:
     st.markdown('<div class="section-header">ℹ️ About This Tool</div>', unsafe_allow_html=True)
-    st.markdown("This tool estimates the probability of clinical pregnancy per IUI cycle, based on a machine learning model developed from a retrospective cohort at a Thai fertility center. It is intended to support patient counseling — not to replace clinical judgment.")
+
+    st.markdown(
+        "This tool estimates the probability of clinical pregnancy per IUI cycle, "
+        "based on machine learning models developed from a retrospective cohort "
+        "at a Thai fertility center. It is intended to support patient counseling — "
+        "not to replace clinical judgment."
+    )
 
     st.markdown('<div class="section-header">Which model should I use?</div>', unsafe_allow_html=True)
+
     col1, col2 = st.columns(2)
+
     with col1:
-        st.markdown("""<div class="info-card"><span class="badge-pw">🔬 Procedure-Day Model</span>
+        st.markdown("""
+        <div class="info-card">
+            <span class="badge-pw">🔬 Procedure-Day Model</span>
             <h3>Use on the day of IUI</h3>
-            <p style="color:#475569;font-size:0.92rem;line-height:1.7;">Requires sperm wash results. Use when postwash semen parameters are available — it gives a more complete picture of the cycle's chances.</p>
-            <p style="color:#94a3b8;font-size:0.85rem;margin-top:0.5rem;">Sensitivity 61.1% &nbsp;·&nbsp; NPV 95.6%</p></div>""", unsafe_allow_html=True)
+            <p style="color:#475569;font-size:0.92rem;line-height:1.7;">
+                Requires sperm wash results. Use when postwash semen parameters are available —
+                it gives a more complete picture of the cycle's chances.
+            </p>
+            <p style="color:#94a3b8;font-size:0.85rem;margin-top:0.5rem;">
+                ROC-AUC 0.699 &nbsp;·&nbsp; Sensitivity 61.1% &nbsp;·&nbsp; NPV 96.0%
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
     with col2:
-        st.markdown("""<div class="info-card"><span class="badge-fv">🏥 Pre-treatment Model</span>
+        st.markdown("""
+        <div class="info-card">
+            <span class="badge-fv">🏥 Pre-treatment Model</span>
             <h3>Use at the initial consultation</h3>
-            <p style="color:#475569;font-size:0.92rem;line-height:1.7;">Requires only baseline clinical and semen parameters. Use to counsel patients before IUI begins — no sperm wash results needed.</p>
-            <p style="color:#94a3b8;font-size:0.85rem;margin-top:0.5rem;">Sensitivity 65.9% &nbsp;·&nbsp; NPV 95.8%</p></div>""", unsafe_allow_html=True)
+            <p style="color:#475569;font-size:0.92rem;line-height:1.7;">
+                Requires only baseline clinical and semen parameters. Use to counsel patients
+                before IUI begins — no sperm wash results needed.
+            </p>
+            <p style="color:#94a3b8;font-size:0.85rem;margin-top:0.5rem;">
+                ROC-AUC 0.625 &nbsp;·&nbsp; Sensitivity 65.9% &nbsp;·&nbsp; NPV 95.8%
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
 
     st.markdown('<div class="section-header">How to read the result</div>', unsafe_allow_html=True)
+
     st.markdown("""
     **The probability (%)** is the model's estimate of how likely this patient is to achieve clinical pregnancy in this cycle.
 
-    **The pregnancy probability tier** shows where this patient falls compared to similar patients in our cohort:
+    **The pregnancy probability tier** shows where this patient falls compared with patients in the development cohort:
 
     | Pregnancy probability tier | What it means |
     |---|---|
-    | 🔴 Low Probability | About 4 in 100 similar patients became pregnant per cycle |
-    | 🟡 Intermediate Probability | About 9–10 in 100 similar patients became pregnant per cycle |
-    | 🟢 High Probability | About 13–18 in 100 similar patients became pregnant per cycle |
+    | 🔴 Low Probability | Lower predicted probability compared with the cohort |
+    | 🟡 Intermediate Probability | Moderate predicted probability compared with the cohort |
+    | 🟢 High Probability | Higher predicted probability compared with the cohort |
 
     **The factors chart** shows which parameters are working for or against this patient. Bars show how strongly each factor influences the result — Strong, Moderate, or Mild.
     """)
@@ -816,28 +914,20 @@ elif "About" in page:
         st.markdown("""
         **Algorithm:** XGBoost with isotonic regression calibration  
         **Cohort:** 2,945 cycles, 1,761 patients (single-center, Thailand)  
-        **Validation:** Patient-level holdout (80/20), bootstrap 95% CI (n=1,000)
+        **Validation:** Patient-level holdout validation
 
         | Metric | Procedure-Day | Pre-treatment |
-        |---|---|---|
-        | ROC-AUC | 0.663 (0.570–0.742) | 0.625 (0.528–0.721) |
-        | Sensitivity | 61.1% (46.2–76.9%) | 65.9% (51.1–80.4%) |
-        | NPV | 95.6% (93.6–97.7%) | 95.8% (93.7–97.9%) |
+        |---|---:|---:|
+        | ROC-AUC | 0.699 | 0.625 |
+        | Sensitivity | 61.1% | 65.9% |
+        | NPV | 96.0% | 95.8% |
         """)
-        col_s1, col_s2 = st.columns(2)
-        with col_s1:
-            st.caption("Procedure-Day Model — SHAP")
-            if PW_SHAP_IMG.exists():
-                st.image(str(PW_SHAP_IMG), use_container_width=True)
-            else:
-                st.info("SHAP image not found.")
-        with col_s2:
-            st.caption("Pre-treatment Model — SHAP")
-            if FV_SHAP_IMG.exists():
-                st.image(str(FV_SHAP_IMG), use_container_width=True)
-            else:
-                st.info("SHAP image not found.")
 
-    st.markdown("""<div class="disclaimer">
-    This tool is a research prototype for academic purposes only. It is intended to support clinical judgment and should not be used as the sole basis for clinical decision-making. Outputs are statistical estimates derived from a single-center retrospective cohort of IUI cycles performed at a Thai fertility center. External validation has not yet been performed.
-    </div>""", unsafe_allow_html=True)
+    st.markdown("""
+    <div class="disclaimer">
+        This tool is a research prototype for academic purposes only. It is intended to support clinical judgment
+        and should not be used as the sole basis for clinical decision-making. Outputs are statistical estimates
+        derived from a single-center retrospective cohort of IUI cycles performed at a Thai fertility center.
+        Temporal validation on a newer cohort is currently being evaluated.
+    </div>
+    """, unsafe_allow_html=True)
