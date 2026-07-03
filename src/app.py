@@ -23,11 +23,11 @@ PROJECT_ROOT = SRC_DIR.parent
 
 PW_BASE_MODEL_PATH = PROJECT_ROOT / "models" / "saved_models" / "final_model" / "XGBoost_Baseline_calibration_base_model.joblib"
 PW_CALIBRATOR_PATH = PROJECT_ROOT / "models" / "saved_models" / "final_model" / "isotonic_calibrator_final_xgb.joblib"
-PW_SHAP_IMG        = PROJECT_ROOT / "reports" / "figures" / "shap_final_xgb" / "SHAP_Beeswarm_Final_XGBoost_Baseline.png"
+PW_SHAP_IMG        = PROJECT_ROOT / "reports" / "figures" / "shap" / "shap_beeswarm.png"
 
 FV_BASE_MODEL_PATH = PROJECT_ROOT / "models" / "saved_models" / "first_visit_model" / "xgb_first_visit_base_model.joblib"
 FV_CALIBRATOR_PATH = PROJECT_ROOT / "models" / "saved_models" / "first_visit_model" / "isotonic_calibrator_first_visit.joblib"
-FV_SHAP_IMG        = PROJECT_ROOT / "reports" / "figures" / "first_visit_model" / "SHAP_Beeswarm_FirstVisit.png"
+FV_SHAP_IMG        = PROJECT_ROOT / "reports" / "figures" / "first_visit_model" / "shap" / "shap_beeswarm_firstvisit.png"
 
 # =============================
 # Feature lists
@@ -51,8 +51,8 @@ FV_FEATURES = [
 
 PW_LOW_CUTOFF  = 0.045802
 PW_HIGH_CUTOFF = 0.100962
-FV_LOW_CUTOFF  = 0.036885
-FV_HIGH_CUTOFF = 0.098507
+FV_LOW_CUTOFF  = 0.030769
+FV_HIGH_CUTOFF = 0.066049
 
 PW_DISPLAY_MAP = {
     "Uterine_Factors":                 "Uterine factor",
@@ -243,12 +243,12 @@ def sigmoid(z):
 def assign_tier(p_cal, model_type="postwash"):
     if model_type == "postwash":
         lo, hi = PW_LOW_CUTOFF, PW_HIGH_CUTOFF
-        obs    = {"low": "about 4 in 100", "mid": "about 10 in 100", "high": "about 18 in 100"}
-        obs_n  = {"low": 4, "mid": 10, "high": 18}
+        obs    = {"low": "about 4 in 100", "mid": "about 9 in 100", "high": "about 18 in 100"}
+        obs_n  = {"low": 4, "mid": 9, "high": 18}
     else:
         lo, hi = FV_LOW_CUTOFF, FV_HIGH_CUTOFF
-        obs    = {"low": "about 4 in 100", "mid": "about 9 in 100", "high": "about 13 in 100"}
-        obs_n  = {"low": 4, "mid": 9, "high": 13}
+        obs    = {"low": "about 3 in 100", "mid": "about 8 in 100", "high": "about 10 in 100"}
+        obs_n  = {"low": 3, "mid": 8, "high": 10}
     if p_cal < lo:
         return "🔴 Low Probability", "low", obs["low"], obs_n["low"]
     if p_cal < hi:
@@ -874,7 +874,7 @@ elif "About" in page:
                 it gives a more complete picture of the cycle's chances.
             </p>
             <p style="color:#94a3b8;font-size:0.85rem;margin-top:0.5rem;">
-                ROC-AUC 0.699 &nbsp;·&nbsp; Sensitivity 61.1% &nbsp;·&nbsp; NPV 96.0%
+                ROC-AUC 0.663 &nbsp;·&nbsp; Sensitivity 61.1% &nbsp;·&nbsp; NPV 95.6%
             </p>
         </div>
         """, unsafe_allow_html=True)
@@ -889,7 +889,7 @@ elif "About" in page:
                 before IUI begins — no sperm wash results needed.
             </p>
             <p style="color:#94a3b8;font-size:0.85rem;margin-top:0.5rem;">
-                ROC-AUC 0.625 &nbsp;·&nbsp; Sensitivity 65.9% &nbsp;·&nbsp; NPV 95.8%
+                ROC-AUC 0.619 &nbsp;·&nbsp; Sensitivity 80.5% &nbsp;·&nbsp; NPV 96.6%
             </p>
         </div>
         """, unsafe_allow_html=True)
@@ -918,9 +918,9 @@ elif "About" in page:
 
         | Metric | Procedure-Day | Pre-treatment |
         |---|---:|---:|
-        | ROC-AUC | 0.699 | 0.625 |
-        | Sensitivity | 61.1% | 65.9% |
-        | NPV | 96.0% | 95.8% |
+        | ROC-AUC | 0.663 | 0.619 |
+        | Sensitivity | 61.1% | 80.5% |
+        | NPV | 95.6% | 96.6% |
         """)
 
     st.markdown("""
