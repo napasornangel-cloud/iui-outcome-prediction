@@ -49,10 +49,10 @@ FV_FEATURES = [
     "First_Progressive_Motile", "First_TPMSC", "BMI_InfertilityType_Interaction",
 ]
 
-PW_LOW_CUTOFF  = 0.045802
+PW_LOW_CUTOFF  = 0.043478
 PW_HIGH_CUTOFF = 0.100962
 FV_LOW_CUTOFF  = 0.030769
-FV_HIGH_CUTOFF = 0.066049
+FV_HIGH_CUTOFF = 0.060932
 
 PW_DISPLAY_MAP = {
     "Uterine_Factors":                 "Uterine factor",
@@ -243,8 +243,8 @@ def sigmoid(z):
 def assign_tier(p_cal, model_type="postwash"):
     if model_type == "postwash":
         lo, hi = PW_LOW_CUTOFF, PW_HIGH_CUTOFF
-        obs    = {"low": "about 4 in 100", "mid": "about 9 in 100", "high": "about 18 in 100"}
-        obs_n  = {"low": 4, "mid": 9, "high": 18}
+        obs    = {"low": "about 3 in 100", "mid": "about 8 in 100", "high": "about 18 in 100"}
+        obs_n  = {"low": 3, "mid": 8, "high": 18}
     else:
         lo, hi = FV_LOW_CUTOFF, FV_HIGH_CUTOFF
         obs    = {"low": "about 3 in 100", "mid": "about 8 in 100", "high": "about 10 in 100"}
