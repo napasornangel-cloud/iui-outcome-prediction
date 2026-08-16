@@ -106,7 +106,18 @@ def add_binary_clinical_flags(df: pd.DataFrame) -> pd.DataFrame:
         )
 
     if "Age_Female" in data.columns:
-        data["Advanced_Age"] = (data["Age_Female"] >= 38).astype(int)
+        # FIX: added NaN guard, consistent with Low_TPMSC / Thin_Endometrium
+        # above. Previously, missing Age_Female would silently evaluate
+        # (NaN >= 38) as False -> 0, mislabeling patients with unknown age
+        # as "not advanced age" rather than leaving the flag undefined. Not
+        # impactful on the current dataset (Age_Female has 0% missing), but
+        # protects against this failure mode if the pipeline is reused on
+        # external data with missing age values.
+        data["Advanced_Age"] = np.where(
+            data["Age_Female"].isna(),
+            np.nan,
+            (data["Age_Female"] >= 38).astype(float),
+        )
 
     return data
 

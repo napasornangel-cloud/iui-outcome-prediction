@@ -14,7 +14,16 @@ FEATURES_PATH = BASE_DIR / "data/processed/cycle_level_features.csv"
 def clean_basic_values(df: pd.DataFrame) -> pd.DataFrame:
     data = df.copy()
 
-    weird_na = {"", " ", "na", "n/a", "nan", "none", "null", "-"}
+    # NOTE: "none" is intentionally NOT included here. Verified against the
+    # raw dataset that "none" appears only in Gynecological_Surgical_History,
+    # where it carries clinical meaning ("no prior surgery") rather than
+    # representing a missing value. Converting it to NaN here would prevent
+    # clean_gynecological_surgical_history() from ever mapping it to 0, since
+    # that function's own false_like set (which includes "none") would never
+    # see the raw string. If "none" appears in other free-text columns in the
+    # future, re-check whether it should be excluded per-column instead of
+    # globally.
+    weird_na = {"", " ", "na", "n/a", "nan", "null", "-"}
 
     for col in data.columns:
         if data[col].dtype == "object":

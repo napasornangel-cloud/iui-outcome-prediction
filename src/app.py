@@ -25,8 +25,8 @@ PW_BASE_MODEL_PATH = PROJECT_ROOT / "models" / "saved_models" / "final_model" / 
 PW_CALIBRATOR_PATH = PROJECT_ROOT / "models" / "saved_models" / "final_model" / "isotonic_calibrator_final_xgb.joblib"
 PW_SHAP_IMG        = PROJECT_ROOT / "reports" / "figures" / "shap" / "shap_beeswarm.png"
 
-FV_BASE_MODEL_PATH = PROJECT_ROOT / "models" / "saved_models" / "first_visit_model" / "xgb_first_visit_base_model.joblib"
-FV_CALIBRATOR_PATH = PROJECT_ROOT / "models" / "saved_models" / "first_visit_model" / "isotonic_calibrator_first_visit.joblib"
+FV_BASE_MODEL_PATH = PROJECT_ROOT / "models" / "saved_models" / "first_visit_model" / "first_visit_calibration_base_model.joblib"
+FV_CALIBRATOR_PATH = PROJECT_ROOT / "models" / "saved_models" / "first_visit_model" / "first_visit_isotonic_calibrator.joblib"
 FV_SHAP_IMG        = PROJECT_ROOT / "reports" / "figures" / "first_visit_model" / "shap" / "shap_beeswarm_firstvisit.png"
 
 # =============================
@@ -49,10 +49,21 @@ FV_FEATURES = [
     "First_Progressive_Motile", "First_TPMSC", "BMI_InfertilityType_Interaction",
 ]
 
-PW_LOW_CUTOFF  = 0.043478
-PW_HIGH_CUTOFF = 0.100962
-FV_LOW_CUTOFF  = 0.030769
-FV_HIGH_CUTOFF = 0.060932
+# =============================
+# Pregnancy Probability Tier cutoffs — 2-TIER (Low vs High)
+#
+# NOTE: Originally 3-tier (Low/Intermediate/High), percentile 33rd/67th,
+# for both models. A seed-sensitivity analysis (7 alternative calibration
+# splits, both 30% and 40% cal fraction) showed the Procedure-Day model's
+# Intermediate/High tiers had overlapping 95% CIs with unstable, often
+# non-monotonic point-estimate ordering. The Pre-treatment model's point
+# estimates were monotonic but its Intermediate/High CIs also overlapped.
+# Both models were consolidated to 2 tiers (median split, 50th percentile
+# on the calibration set) for consistency and statistical robustness — see
+# model_training.ipynb cell 23 and first_visit_model.ipynb cell 20.
+# =============================
+PW_CUTOFF = 0.030612
+FV_CUTOFF = 0.060932
 
 PW_DISPLAY_MAP = {
     "Uterine_Factors":                 "Uterine factor",
@@ -172,22 +183,18 @@ section[data-testid="stSidebar"] * { color: #e8f0fe !important; }
 .main { background: #f5f7fa; }
 
 .risk-low  { background:#fff5f5; border:2px solid #fc8181; border-radius:20px; padding:2rem 2.5rem; text-align:center; margin-bottom:1rem; }
-.risk-mid  { background:#fffbeb; border:2px solid #f6ad55; border-radius:20px; padding:2rem 2.5rem; text-align:center; margin-bottom:1rem; }
 .risk-high { background:#f0fff4; border:2px solid #68d391; border-radius:20px; padding:2rem 2.5rem; text-align:center; margin-bottom:1rem; }
 .risk-group-label { font-size:0.82rem; font-weight:600; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:0.4rem; }
 .risk-group-label-low  { color:#c53030; }
-.risk-group-label-mid  { color:#c05621; }
 .risk-group-label-high { color:#276749; }
 .risk-prob { font-family:'DM Serif Display',serif; font-size:4rem; line-height:1; margin:0.4rem 0; }
 .risk-prob-low  { color:#c53030; }
-.risk-prob-mid  { color:#c05621; }
 .risk-prob-high { color:#276749; }
 .risk-sub { font-size:0.85rem; color:#718096; }
 
 .prob-bar-wrap { margin:1rem 0 1.8rem; position:relative; height:12px; background:#e2e8f0; border-radius:8px; }
 .prob-bar-fill { height:12px; border-radius:8px; }
 .prob-bar-fill-low  { background:linear-gradient(90deg,#fed7d7,#fc8181); }
-.prob-bar-fill-mid  { background:linear-gradient(90deg,#feebc8,#f6ad55); }
 .prob-bar-fill-high { background:linear-gradient(90deg,#c6f6d5,#68d391); }
 .tier-marker { position:absolute; top:-6px; width:2px; height:24px; background:#94a3b8; }
 .tier-marker-label { position:absolute; top:22px; font-size:0.62rem; color:#94a3b8; transform:translateX(-50%); white-space:nowrap; }
@@ -195,7 +202,6 @@ section[data-testid="stSidebar"] * { color: #e8f0fe !important; }
 .dot-grid { display:flex; flex-wrap:wrap; gap:3px; margin:0.5rem 0; max-width:340px; }
 .dot { width:10px; height:10px; border-radius:50%; }
 .dot-active-low  { background:#fc8181; }
-.dot-active-mid  { background:#f6ad55; }
 .dot-active-high { background:#68d391; }
 .dot-inactive { background:#e2e8f0; }
 
@@ -219,7 +225,6 @@ section[data-testid="stSidebar"] * { color: #e8f0fe !important; }
 
 .cycle-card { background:white; border-radius:12px; padding:1rem 1.5rem; box-shadow:0 2px 8px rgba(15,43,74,0.07); margin-bottom:0.5rem; border-left:4px solid #e2e8f0; }
 .cycle-card-low  { border-left-color:#fc8181; }
-.cycle-card-mid  { border-left-color:#f6ad55; }
 .cycle-card-high { border-left-color:#68d391; }
 
 .val-warn { background:#fff3cd; border:1px solid #ffc107; border-radius:8px; padding:0.6rem 1rem; font-size:0.84rem; color:#856404; margin-bottom:0.5rem; }
@@ -241,19 +246,23 @@ def sigmoid(z):
     return 1.0 / (1.0 + np.exp(-z))
 
 def assign_tier(p_cal, model_type="postwash"):
+    """
+    2-tier assignment (Low / High), based on a single median-split cutoff
+    computed on the calibration set for each model. See PW_CUTOFF / FV_CUTOFF
+    above for provenance.
+    """
     if model_type == "postwash":
-        lo, hi = PW_LOW_CUTOFF, PW_HIGH_CUTOFF
-        obs    = {"low": "about 3 in 100", "mid": "about 8 in 100", "high": "about 18 in 100"}
-        obs_n  = {"low": 3, "mid": 8, "high": 18}
+        cutoff = PW_CUTOFF
+        low_obs, low_n = "about 4 in 100", 4
+        high_obs, high_n = "about 11 in 100", 11
     else:
-        lo, hi = FV_LOW_CUTOFF, FV_HIGH_CUTOFF
-        obs    = {"low": "about 3 in 100", "mid": "about 8 in 100", "high": "about 10 in 100"}
-        obs_n  = {"low": 3, "mid": 8, "high": 10}
-    if p_cal < lo:
-        return "🔴 Low Probability", "low", obs["low"], obs_n["low"]
-    if p_cal < hi:
-        return "🟡 Intermediate Probability", "mid", obs["mid"], obs_n["mid"]
-    return "🟢 High Probability", "high", obs["high"], obs_n["high"]
+        cutoff = FV_CUTOFF
+        low_obs, low_n = "about 6 in 100", 6
+        high_obs, high_n = "about 10 in 100", 10
+
+    if p_cal < cutoff:
+        return "🔴 Low Probability", "low", low_obs, low_n
+    return "🟢 High Probability", "high", high_obs, high_n
 
 def get_display_name(raw_name, model_type="postwash"):
     dm = PW_DISPLAY_MAP if model_type == "postwash" else FV_DISPLAY_MAP
@@ -351,12 +360,10 @@ def get_factors(X_row, model_type="postwash", top_k=5):
 # Render helpers
 # =============================
 def render_prob_bar(p_cal, tier_key, model_type):
-    lo = PW_LOW_CUTOFF if model_type == "postwash" else FV_LOW_CUTOFF
-    hi = PW_HIGH_CUTOFF if model_type == "postwash" else FV_HIGH_CUTOFF
+    cutoff = PW_CUTOFF if model_type == "postwash" else FV_CUTOFF
     cap = 0.30
-    fill_pct = min(p_cal / cap, 1.0) * 100
-    lo_pct   = min(lo / cap, 1.0) * 100
-    hi_pct   = min(hi / cap, 1.0) * 100
+    fill_pct   = min(p_cal / cap, 1.0) * 100
+    cutoff_pct = min(cutoff / cap, 1.0) * 100
     st.markdown(f"""
     <div style="margin:1rem 0 1.8rem;">
         <div style="display:flex; justify-content:space-between; font-size:0.72rem; color:#94a3b8; margin-bottom:4px;">
@@ -364,13 +371,12 @@ def render_prob_bar(p_cal, tier_key, model_type):
         </div>
         <div class="prob-bar-wrap">
             <div class="prob-bar-fill prob-bar-fill-{tier_key}" style="width:{fill_pct:.1f}%"></div>
-            <div class="tier-marker" style="left:{lo_pct:.1f}%"><div class="tier-marker-label">Low / Mid</div></div>
-            <div class="tier-marker" style="left:{hi_pct:.1f}%"><div class="tier-marker-label">Mid / High</div></div>
+            <div class="tier-marker" style="left:{cutoff_pct:.1f}%"><div class="tier-marker-label">Low / High</div></div>
         </div>
     </div>""", unsafe_allow_html=True)
 
 def render_dot_grid(obs_n, tier_key):
-    color_hex = {"low": "#fc8181", "mid": "#f6ad55", "high": "#68d391"}[tier_key]
+    color_hex = {"low": "#fc8181", "high": "#68d391"}[tier_key]
     dots = "".join(
         f'<div class="dot dot-active-{tier_key}"></div>' if i < obs_n else '<div class="dot dot-inactive"></div>'
         for i in range(100)
@@ -437,9 +443,9 @@ def plot_shap_waterfall(X_row, model_type="postwash"):
 def generate_pdf_report(p_cal, model_type, against, favor, patient_id=""):
     tier_label, tier_key, obs, obs_n = assign_tier(p_cal, model_type)
     model_name = "Procedure-Day Model" if model_type == "postwash" else "Pre-treatment Model"
-    tier_color  = {"low": colors.HexColor("#c53030"), "mid": colors.HexColor("#c05621"), "high": colors.HexColor("#276749")}[tier_key]
-    tier_bg     = {"low": colors.HexColor("#fff5f5"), "mid": colors.HexColor("#fffbeb"), "high": colors.HexColor("#f0fff4")}[tier_key]
-    tier_border = {"low": colors.HexColor("#fc8181"), "mid": colors.HexColor("#f6ad55"), "high": colors.HexColor("#68d391")}[tier_key]
+    tier_color  = {"low": colors.HexColor("#c53030"), "high": colors.HexColor("#276749")}[tier_key]
+    tier_bg     = {"low": colors.HexColor("#fff5f5"), "high": colors.HexColor("#f0fff4")}[tier_key]
+    tier_border = {"low": colors.HexColor("#fc8181"), "high": colors.HexColor("#68d391")}[tier_key]
 
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=2*cm, rightMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
@@ -530,7 +536,7 @@ def render_cycle_history():
     for col, entry in zip(cols, st.session_state.cycle_history):
         with col:
             badge = "🔬" if entry["model_type"] == "postwash" else "🏥"
-            prob_color = {"low": "#c53030", "mid": "#c05621", "high": "#276749"}[entry["tier_key"]]
+            prob_color = {"low": "#c53030", "high": "#276749"}[entry["tier_key"]]
             st.markdown(f"""
             <div class="cycle-card cycle-card-{entry['tier_key']}">
                 <div style="font-size:0.72rem; color:#94a3b8; margin-bottom:4px;">{badge} {entry['label']} · {entry['timestamp']}</div>
@@ -543,15 +549,13 @@ def render_cycle_history():
         ax.set_facecolor("white")
         probs  = [e["p_cal"] * 100 for e in st.session_state.cycle_history]
         labels = [e["label"] for e in st.session_state.cycle_history]
-        bcolors = {"low": "#d55e00", "mid": "#e69f00", "high": "#0072b2"}
+        bcolors = {"low": "#d55e00", "high": "#0072b2"}
         ax.bar(labels, probs, color=[bcolors[e["tier_key"]] for e in st.session_state.cycle_history], width=0.5, zorder=3)
         ax.set_ylabel("Probability (%)", fontsize=9)
         ax.set_ylim(0, max(probs) * 1.6 + 1)
         last_model_type = st.session_state.cycle_history[-1]["model_type"]
-        ref_lo = PW_LOW_CUTOFF if last_model_type == "postwash" else FV_LOW_CUTOFF
-        ref_hi = PW_HIGH_CUTOFF if last_model_type == "postwash" else FV_HIGH_CUTOFF
-        ax.axhline(ref_lo * 100, color="#94a3b8", linestyle="--", linewidth=0.8, alpha=0.5)
-        ax.axhline(ref_hi * 100, color="#94a3b8", linestyle="--", linewidth=0.8, alpha=0.5)
+        ref_cutoff = PW_CUTOFF if last_model_type == "postwash" else FV_CUTOFF
+        ax.axhline(ref_cutoff * 100, color="#94a3b8", linestyle="--", linewidth=0.8, alpha=0.5)
         for spine in ["top", "right"]: ax.spines[spine].set_visible(False)
         ax.grid(axis="y", alpha=0.15)
         plt.tight_layout()
@@ -806,10 +810,9 @@ elif "Multiple" in page:
                 st.success(f"Done — {len(out)} records processed")
                 from collections import Counter
                 counts = Counter([t[1] for t in tiers])
-                c1, c2, c3 = st.columns(3)
+                c1, c2 = st.columns(2)
                 c1.metric("🔴 Low Probability", counts.get("low", 0))
-                c2.metric("🟡 Intermediate Probability", counts.get("mid", 0))
-                c3.metric("🟢 High Probability", counts.get("high", 0))
+                c2.metric("🟢 High Probability", counts.get("high", 0))
                 st.dataframe(out[["Pregnancy probability", "Pregnancy Probability Tier"]], use_container_width=True, hide_index=True)
                 st.download_button("⬇️ Download Full Results", out.to_csv(index=False).encode("utf-8"),
                                    "iui_predictions.csv","text/csv", use_container_width=True)
@@ -874,7 +877,7 @@ elif "About" in page:
                 it gives a more complete picture of the cycle's chances.
             </p>
             <p style="color:#94a3b8;font-size:0.85rem;margin-top:0.5rem;">
-                ROC-AUC 0.663 &nbsp;·&nbsp; Sensitivity 61.1% &nbsp;·&nbsp; NPV 95.6%
+                ROC-AUC 0.636 &nbsp;·&nbsp; Sensitivity 49.1% &nbsp;·&nbsp; NPV 94.7%
             </p>
         </div>
         """, unsafe_allow_html=True)
@@ -904,7 +907,6 @@ elif "About" in page:
     | Pregnancy probability tier | What it means |
     |---|---|
     | 🔴 Low Probability | Lower predicted probability compared with the cohort |
-    | 🟡 Intermediate Probability | Moderate predicted probability compared with the cohort |
     | 🟢 High Probability | Higher predicted probability compared with the cohort |
 
     **The factors chart** shows which parameters are working for or against this patient. Bars show how strongly each factor influences the result — Strong, Moderate, or Mild.
@@ -918,9 +920,9 @@ elif "About" in page:
 
         | Metric | Procedure-Day | Pre-treatment |
         |---|---:|---:|
-        | ROC-AUC | 0.663 | 0.619 |
-        | Sensitivity | 61.1% | 80.5% |
-        | NPV | 95.6% | 96.6% |
+        | ROC-AUC | 0.636 | 0.619 |
+        | Sensitivity | 49.1% | 80.5% |
+        | NPV | 94.7% | 96.6% |
         """)
 
     st.markdown("""
