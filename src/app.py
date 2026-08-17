@@ -282,6 +282,48 @@ def validate_inputs(raw_inputs):
             warnings.append(f"{field.replace('_', ' ')}: {val} (expected {lo}–{hi})")
     return warnings
 
+def validate_inputs_df(df):
+    """Row-wise version of validate_inputs() for CSV batch uploads (Multiple
+    Patients / Detailed Analysis pages). The manual Single Patient form is
+    protected by validate_inputs() above via Streamlit widget bounds and an
+    inline warning banner; CSV-uploaded data has no such protection unless
+    checked here. Returns a tidy DataFrame of out-of-range values (empty if
+    none found). Same '0.0 is never flagged' convention as validate_inputs(),
+    since 0 is a legitimate value for several of these fields (e.g. sperm
+    count in azoospermia).
+    """
+    rows = []
+    for field, (lo, hi) in VALIDATION_RULES.items():
+        if field not in df.columns:
+            continue
+        vals = pd.to_numeric(df[field], errors="coerce")
+        out_of_range = vals.notna() & (vals != 0.0) & ~vals.between(lo, hi)
+        for row_idx in df.index[out_of_range]:
+            rows.append({
+                "Row":            int(row_idx) + 1,
+                "Field":          field.replace("_", " "),
+                "Value":          vals.loc[row_idx],
+                "Expected range": f"{lo}–{hi}",
+            })
+    return pd.DataFrame(rows, columns=["Row", "Field", "Value", "Expected range"])
+
+def render_batch_validation_warnings(df_raw):
+    """Show a dismissible warning + detail table if any row in a batch upload
+    has out-of-range values. Does not block processing — mirrors the
+    non-blocking behaviour of the Single Patient form."""
+    warn_df = validate_inputs_df(df_raw)
+    if not warn_df.empty:
+        n_rows = warn_df["Row"].nunique()
+        st.markdown(
+            f'<div class="val-warn">⚠️ {len(warn_df)} out-of-range value(s) found '
+            f'across {n_rows} row(s). These rows will still be processed using the '
+            f'values as entered — please double-check for data-entry errors.</div>',
+            unsafe_allow_html=True
+        )
+        with st.expander("Show out-of-range values"):
+            st.dataframe(warn_df, use_container_width=True, hide_index=True)
+    return warn_df
+
 def compute_pw_features(df_raw):
     df = df_raw.copy()
     missing = [c for c in PW_REQUIRED_RAW if c not in df.columns]
@@ -658,11 +700,28 @@ if "Single" in page:
                 uterine_factors = st.selectbox("Uterine factor", [0, 1])
                 ovulatory_factors = st.selectbox("Ovulatory factor", [0, 1])
                 gyn_surgery = st.selectbox("Prior gynecologic surgery", [0, 1])
-                total_female_pathology = st.number_input(
-                    "Total female pathology score",
-                    0.0, 7.0, float(uterine_factors + ovulatory_factors), 1.0,
-                    help="Total number of female pathology factors recorded for this patient."
+                # FIX: Total female pathology score must sum all 7 factors
+                # (Uterine, Tubal, Ovarian, Ovulatory, Cervical, Endometriosis,
+                # Multisystem) to match compute_pw_features(), which is what the
+                # model was trained on. Only Uterine/Ovulatory are used as their
+                # own model features and shown above; the other 5 are collected
+                # here solely to compute a correct total, matching the CSV
+                # upload path exactly. Previously this field defaulted to
+                # uterine + ovulatory only (2 of 7), silently undercounting the
+                # score for patients with tubal, ovarian, cervical, or
+                # multisystem pathology unless the clinician manually corrected it.
+                with st.expander("Other pathology factors (tubal, ovarian, cervical, multisystem)"):
+                    tubal_factors = st.selectbox("Tubal factor", [0, 1], key="pw_tubal")
+                    ovarian_factors = st.selectbox("Ovarian factor", [0, 1], key="pw_ovarian")
+                    cervical_factors = st.selectbox("Cervical factor", [0, 1], key="pw_cervical")
+                    endometriosis_factors = st.selectbox("Endometriosis", [0, 1], key="pw_endo")
+                    multisystem_factors = st.selectbox("Multisystem factor", [0, 1], key="pw_multi")
+                total_female_pathology = float(
+                    uterine_factors + tubal_factors + ovarian_factors +
+                    ovulatory_factors + cervical_factors + endometriosis_factors +
+                    multisystem_factors
                 )
+                st.caption(f"Total female pathology score: **{total_female_pathology:.0f}** (auto-computed from all factors above)")
 
             with col2:
                 st.markdown('<div class="form-group-label">Initial Semen Analysis</div>', unsafe_allow_html=True)
@@ -695,13 +754,21 @@ if "Single" in page:
                 tubal_factors = st.selectbox("Tubal factor", [0, 1])
                 endometriosis_factors = st.selectbox("Endometriosis", [0, 1])
                 gyn_surgery = st.selectbox("Prior gynecologic surgery", [0, 1])
-                total_female_pathology = st.number_input(
-                    "Total female pathology score",
-                    0.0, 7.0,
-                    float(uterine_factors + ovulatory_factors + tubal_factors + endometriosis_factors),
-                    1.0,
-                    help="Total number of female pathology factors recorded for this patient."
+                # FIX: same reasoning as the Procedure-Day form — the total must
+                # sum all 7 factors to match compute_fv_features(). Only
+                # Uterine/Ovulatory/Tubal/Endometriosis are used as their own
+                # model features and shown above; Ovarian/Cervical/Multisystem
+                # are collected here solely to compute a correct total.
+                with st.expander("Other pathology factors (ovarian, cervical, multisystem)"):
+                    ovarian_factors = st.selectbox("Ovarian factor", [0, 1], key="fv_ovarian")
+                    cervical_factors = st.selectbox("Cervical factor", [0, 1], key="fv_cervical")
+                    multisystem_factors = st.selectbox("Multisystem factor", [0, 1], key="fv_multi")
+                total_female_pathology = float(
+                    uterine_factors + tubal_factors + ovarian_factors +
+                    ovulatory_factors + cervical_factors + endometriosis_factors +
+                    multisystem_factors
                 )
+                st.caption(f"Total female pathology score: **{total_female_pathology:.0f}** (auto-computed from all factors above)")
 
             with col2:
                 st.markdown('<div class="form-group-label">Initial Semen Analysis</div>', unsafe_allow_html=True)
@@ -798,6 +865,7 @@ elif "Multiple" in page:
         df_raw = pd.read_csv(uploaded)
         st.write(f"**{len(df_raw)} records loaded** — preview:")
         st.dataframe(df_raw.head(), use_container_width=True)
+        render_batch_validation_warnings(df_raw)
         if st.button("Calculate Probabilities", use_container_width=True, type="primary"):
             try:
                 with st.spinner("Processing..."):
@@ -829,6 +897,7 @@ elif "Detailed" in page:
         df_raw2 = pd.read_csv(uploaded2)
         st.dataframe(df_raw2.head(), use_container_width=True)
         row_idx = st.number_input("Select row to analyse", 0, max(0, len(df_raw2)-1), 0, 1)
+        render_batch_validation_warnings(df_raw2.iloc[[int(row_idx)]])
         if st.button("Analyse This Patient", type="primary"):
             try:
                 with st.spinner("Analysing..."):
