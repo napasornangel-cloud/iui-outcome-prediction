@@ -21,23 +21,55 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 SRC_DIR      = Path(__file__).resolve().parent
 PROJECT_ROOT = SRC_DIR.parent
 
-PW_BASE_MODEL_PATH = PROJECT_ROOT / "models" / "saved_models" / "final_model" / "XGBoost_Baseline_calibration_base_model.joblib"
-PW_CALIBRATOR_PATH = PROJECT_ROOT / "models" / "saved_models" / "final_model" / "isotonic_calibrator_final_xgb.joblib"
+PW_BASE_MODEL_PATH = PROJECT_ROOT / "models" / "saved_models" / "final_model" / "CatBoost_Baseline_calibration_base_model.joblib"
+PW_CALIBRATOR_PATH = PROJECT_ROOT / "models" / "saved_models" / "final_model" / "isotonic_calibrator_final_catboost.joblib"
+# FIX (raised by manual review): loaded from model_training.ipynb's actual
+# saved artifact (imputer_final_catboost.joblib, fit on Subtrain only),
+# same pattern as FV_IMPUTER_PATH below -- replaces the previous
+# hardcoded-median approach for the Procedure-Day model too.
+PW_IMPUTER_PATH     = PROJECT_ROOT / "models" / "saved_models" / "final_model" / "imputer_final_catboost.joblib"
 PW_SHAP_IMG        = PROJECT_ROOT / "reports" / "figures" / "shap" / "shap_beeswarm.png"
 
 FV_BASE_MODEL_PATH = PROJECT_ROOT / "models" / "saved_models" / "first_visit_model" / "first_visit_calibration_base_model.joblib"
 FV_CALIBRATOR_PATH = PROJECT_ROOT / "models" / "saved_models" / "first_visit_model" / "first_visit_isotonic_calibrator.joblib"
+# FIX (raised by manual review): first_visit_model.ipynb saves a
+# SimpleImputer fit ONLY on Subtrain rows, so its medians match exactly
+# what the deployed LightGBM base model was trained on. This artifact was
+# never loaded here -- compute_fv_features() instead filled missing raw
+# inputs with hardcoded FV_MEDIANS below, which may not match the actual
+# Subtrain medians. Now loaded and used as the single source of truth for
+# imputation (see predict()); FV_MEDIANS is kept only as a display default
+# for the manual-entry form's number_input widgets, not for imputation.
+FV_IMPUTER_PATH = PROJECT_ROOT / "models" / "saved_models" / "first_visit_model" / "first_visit_imputer.joblib"
 FV_SHAP_IMG        = PROJECT_ROOT / "reports" / "figures" / "first_visit_model" / "shap" / "shap_beeswarm_firstvisit.png"
 
 # =============================
+# Pathology-column set — shared by both models' Total_Female_Pathology
+# computation (see compute_pw_features / compute_fv_features).
+# =============================
+PATHOLOGY_COLS = [
+    "Uterine_Factors", "Tubal_Factors", "Ovarian_Factors",
+    "Ovulatory_Factors", "Cervical_Factors",
+    "Endometriosis_Factors", "Multisystem_Factors",
+]
+
+# =============================
 # Feature lists
+#
+# FIX (raised by manual review): the Procedure-Day model was re-selected
+# via the full algorithm-selection protocol in model_training.ipynb and is
+# now CatBoost with a DIFFERENT, data-driven 20-feature set (feature-budget
+# optimization on the full 66-feature candidate pool) -- not the previous
+# 16-feature XGBoost list. Pulled directly from that notebook's "Feature
+# Budget Optimization" cell output ("Top 20 selected features").
 # =============================
 PW_FEATURES = [
-    "Uterine_Factors", "Total_Female_Pathology", "Ovulatory_Factors",
-    "Cycle_Day", "First_Count", "Pre_Count", "Post_TPMSC",
-    "Gynecological_Surgical_History", "Delta_Motile", "Age_Female",
-    "First_Volume", "Post_Count", "Menstrual_Interval_Days",
-    "First_Progressive_Motile", "First_TPMSC", "BMI_InfertilityType_Interaction",
+    "Uterine_Factors", "Total_Female_Pathology", "Menstrual_Interval_Days",
+    "First_Count", "First_TPMSC", "Post_TPMSC", "Post_Count", "Age_Female",
+    "First_Volume", "Delta_Progressive_Motile", "Age_FSH_Interaction",
+    "Pre_TPMSC", "Dysmenorrhea", "Delta_Motile", "First_Progressive_Motile",
+    "Ratio_TPMSC", "Age_Male", "Gynecological_Surgical_History",
+    "Body_Mass_Index", "Pre_Count",
 ]
 
 FV_FEATURES = [
@@ -61,28 +93,40 @@ FV_FEATURES = [
 # Both models were consolidated to 2 tiers (median split, 50th percentile
 # on the calibration set) for consistency and statistical robustness — see
 # model_training.ipynb cell 23 and first_visit_model.ipynb cell 20.
+#
+# FIX (raised by manual review): PW_CUTOFF was stale, left over from before
+# the Procedure-Day model was re-selected as CatBoost/20-features. Updated
+# from model_training.ipynb's tier cell actual printed output:
+#   "Cutoff method: percentile-based on CALIBRATION set (50th=0.0420) ...
+#    PW_CUTOFF = 0.042017"
 # =============================
-PW_CUTOFF = 0.030612
-FV_CUTOFF = 0.060932
+PW_CUTOFF = 0.042017
+# FV_CUTOFF also updated to match the actual final run's tier cell output
+# ("Cutoff: c1=0.068182") -- the previous value (0.060932) predated the
+# final LightGBM__Baseline_NoResampling / 30% calibration-fraction lock.
+FV_CUTOFF = 0.068182
 
 PW_DISPLAY_MAP = {
     "Uterine_Factors":                 "Uterine factor",
     "Total_Female_Pathology":          "Total female pathology score",
-    "Ovulatory_Factors":               "Ovulatory factor",
-    "Cycle_Day":                       "IUI cycle day",
-    "Post_TPMSC":                      "Postwash TPMSC (million)",
-    "First_Count":                     "Initial sperm concentration (×10⁶/mL)",
-    "Pre_Count":                       "Prewash sperm concentration (×10⁶/mL)",
-    "Gynecological_Surgical_History":  "Prior gynecologic surgery",
-    "Post_Count":                      "Postwash sperm count (×10⁶/mL)",
-    "Delta_Motile":                    "Change in total motility after wash (%)",
-    "Age_Female":                      "Female age (years)",
-    "First_Progressive_Motile":        "Initial progressive motility (%)",
-    "First_Volume":                    "Initial semen volume (mL)",
     "Menstrual_Interval_Days":         "Menstrual cycle length (days)",
-    "First_Motile":                    "Initial total motility (%)",
-    "BMI_InfertilityType_Interaction": "BMI × infertility type",
+    "First_Count":                     "Initial sperm concentration (×10⁶/mL)",
     "First_TPMSC":                     "Initial TPMSC (million)",
+    "Post_TPMSC":                      "Postwash TPMSC (million)",
+    "Post_Count":                      "Postwash sperm count (×10⁶/mL)",
+    "Age_Female":                      "Female age (years)",
+    "First_Volume":                    "Initial semen volume (mL)",
+    "Delta_Progressive_Motile":        "Change in progressive motility after wash (%)",
+    "Age_FSH_Interaction":             "Age × baseline FSH",
+    "Pre_TPMSC":                       "Prewash TPMSC (million)",
+    "Dysmenorrhea":                    "Dysmenorrhea",
+    "Delta_Motile":                    "Change in total motility after wash (%)",
+    "First_Progressive_Motile":        "Initial progressive motility (%)",
+    "Ratio_TPMSC":                     "Postwash:prewash TPMSC ratio",
+    "Age_Male":                        "Male age (years)",
+    "Gynecological_Surgical_History":  "Prior gynecologic surgery",
+    "Body_Mass_Index":                 "BMI (kg/m²)",
+    "Pre_Count":                       "Prewash sperm concentration (×10⁶/mL)",
 }
 
 FV_DISPLAY_MAP = {
@@ -104,14 +148,20 @@ FV_DISPLAY_MAP = {
     "BMI_InfertilityType_Interaction":"BMI × infertility type",
 }
 
+# FIX (raised by manual review): expanded/replaced to match the new
+# 20-feature CatBoost model's actual dependencies. Some raw inputs feed
+# engineered features not shown directly to the user (e.g.
+# Post_Progressive_Motile/Pre_Progressive_Motile -> Delta_Progressive_Motile;
+# FSH_Baseline -> Age_FSH_Interaction; Pre_TPMSC -> Ratio_TPMSC).
 PW_REQUIRED_RAW = [
     "Uterine_Factors", "Tubal_Factors", "Ovarian_Factors",
     "Ovulatory_Factors", "Cervical_Factors", "Endometriosis_Factors",
-    "Multisystem_Factors", "Cycle_Day", "Post_TPMSC", "First_Count",
-    "Pre_Count", "Gynecological_Surgical_History", "Post_Count",
-    "Post_Motile", "Pre_Motile", "Age_Female", "First_Progressive_Motile",
-    "First_Volume", "Menstrual_Interval_Days", "First_Motile",
-    "Body_Mass_Index", "Infertility_Type",
+    "Multisystem_Factors", "Menstrual_Interval_Days",
+    "First_Count", "First_Volume", "First_Progressive_Motile",
+    "Post_TPMSC", "Post_Count", "Post_Progressive_Motile", "Post_Motile",
+    "Age_Female", "Age_Male", "FSH_Baseline",
+    "Pre_TPMSC", "Pre_Count", "Pre_Motile", "Pre_Progressive_Motile",
+    "Dysmenorrhea", "Gynecological_Surgical_History", "Body_Mass_Index",
 ]
 
 FV_REQUIRED_RAW = [
@@ -123,17 +173,34 @@ FV_REQUIRED_RAW = [
     "First_Volume", "First_Count", "First_Progressive_Motile",
 ]
 
+# FIX (raised by manual review): kept ONLY as display defaults for the
+# manual-entry form's number_input widgets -- actual imputation for
+# missing values uses the real fitted imputer (PW_IMPUTER_PATH), loaded in
+# compute_pw_features(), not these numbers. Values below are computed
+# directly from data/raw/final_coding.xlsx (sheet "final", n=3,161 raw
+# records before cleaning/filtering) -- these are raw-data medians, not
+# the exact Subtrain-only medians the deployed imputer was fit on, but are
+# a much closer approximation than the earlier placeholders (e.g.
+# Post_Progressive_Motile was previously guessed at 60.0; actual median
+# is 96.66 -- postwash progressive motility is naturally very high since
+# it's the selected/concentrated fraction).
 PW_MEDIANS = {
     "Uterine_Factors": 0.0, "Tubal_Factors": 0.0, "Ovarian_Factors": 0.0,
     "Ovulatory_Factors": 0.0, "Cervical_Factors": 0.0,
     "Endometriosis_Factors": 0.0, "Multisystem_Factors": 0.0,
-    "Cycle_Day": 14.0, "Post_TPMSC": 10.641124, "First_Count": 41.31,
-    "Pre_Count": 42.6, "Gynecological_Surgical_History": 0.0,
-    "Post_Count": 22.2, "Post_Motile": 96.93, "Pre_Motile": 57.6,
-    "Age_Female": 35.0, "First_Progressive_Motile": 52.56,
-    "First_Volume": 3.0, "Menstrual_Interval_Days": 29.0,
-    "First_Motile": 54.7, "Body_Mass_Index": 21.718066,
-    "Infertility_Type": 0.0,
+    "Menstrual_Interval_Days": 29.0,
+    "First_Count": 41.31, "First_Volume": 3.0, "First_Progressive_Motile": 52.56,
+    "Post_TPMSC": 10.70, "Post_Count": 22.2, "Post_Motile": 96.93,
+    "Post_Progressive_Motile": 96.66,
+    "Age_Female": 35.0,
+    "Age_Male": 36.0,
+    "FSH_Baseline": 6.88,
+    "Pre_TPMSC": 49.11,
+    "Pre_Count": 42.6, "Pre_Motile": 57.6,
+    "Pre_Progressive_Motile": 55.24,
+    "Dysmenorrhea": 1.0,  # ordinal severity 0-3, NOT binary -- see VALIDATION_RULES note
+    "Gynecological_Surgical_History": 0.0,
+    "Body_Mass_Index": 21.64,
 }
 
 FV_MEDIANS = {
@@ -150,6 +217,10 @@ FV_MEDIANS = {
 
 VALIDATION_RULES = {
     "Age_Female":               (18, 55),
+    # FIX: raw data max was 148 (clear data-entry error); range now set
+    # from the 99th percentile (53.4) with margin, from
+    # data/raw/final_coding.xlsx.
+    "Age_Male":                 (18, 65),
     "Body_Mass_Index":          (10, 60),
     "Menstrual_Interval_Days":  (15, 180),
     "Cycle_Day":                (1, 40),
@@ -159,9 +230,16 @@ VALIDATION_RULES = {
     "First_Progressive_Motile": (0, 100),
     "Pre_Count":                (0, 500),
     "Pre_Motile":               (0, 100),
+    "Pre_Progressive_Motile":   (0, 100),
+    # FIX: previous range (0, 500) was too narrow -- raw data max is
+    # 614.34 (from data/raw/final_coding.xlsx).
+    "Pre_TPMSC":                (0, 700),
     "Post_Count":               (0, 500),
     "Post_TPMSC":               (0, 500),
     "Post_Motile":              (0, 100),
+    "Post_Progressive_Motile":  (0, 100),
+    "FSH_Baseline":             (0, 40),
+    "Dysmenorrhea":             (0, 3),
     "Total_infertile_duration": (0, 360),
 }
 
@@ -257,10 +335,20 @@ def assign_tier(p_cal, model_type="postwash"):
         high_obs, high_n = "about 11 in 100", 11
     else:
         cutoff = FV_CUTOFF
-        low_obs, low_n = "about 6 in 100", 6
-        high_obs, high_n = "about 10 in 100", 10
+        low_obs, low_n = "about 5 in 100", 5
+        high_obs, high_n = "about 9 in 100", 9
 
-    if p_cal < cutoff:
+    # FIX (raised by manual review): both notebooks assign tiers with
+    # pd.cut(bins=[-inf, cutoff, inf]), whose default right=True makes the
+    # Low bin the half-open interval (-inf, cutoff] -- a probability
+    # EXACTLY EQUAL to cutoff belongs to Low. This previously used `<`,
+    # which would put a tied probability in High instead, disagreeing
+    # with the notebooks (see first_visit_tier_manifest.json's
+    # boundary_rule: "p_cal <= cutoff -> Low; p_cal > cutoff -> High").
+    # Ties are not rare here: isotonic regression produces a small number
+    # of unique probability values (7-16 in the final runs), so many
+    # patients can land exactly on the cutoff.
+    if p_cal <= cutoff:
         return "🔴 Low Probability", "low", low_obs, low_n
     return "🟢 High Probability", "high", high_obs, high_n
 
@@ -274,11 +362,27 @@ def load_model(model_type="postwash"):
         return joblib.load(PW_BASE_MODEL_PATH), joblib.load(PW_CALIBRATOR_PATH)
     return joblib.load(FV_BASE_MODEL_PATH), joblib.load(FV_CALIBRATOR_PATH)
 
+@st.cache_resource
+def load_pw_imputer():
+    return joblib.load(PW_IMPUTER_PATH)
+
+@st.cache_resource
+def load_fv_imputer():
+    return joblib.load(FV_IMPUTER_PATH)
+
 def validate_inputs(raw_inputs):
+    # FIX (raised by manual review): the "val != 0.0" exemption was meant
+    # to avoid flagging legitimate zero counts (e.g. sperm count = 0 in
+    # azoospermia), but those fields already have lo=0 in VALIDATION_RULES
+    # and so never trigger a warning for val=0 anyway (0 is within
+    # [0, hi]). The blanket exemption instead suppressed warnings for
+    # fields where 0 is NOT a valid value and lo > 0 -- e.g. Age_Female=0,
+    # BMI=0, or Menstrual_Interval_Days=0 would previously pass silently
+    # with no warning despite being obvious data-entry errors.
     warnings = []
     for field, (lo, hi) in VALIDATION_RULES.items():
         val = raw_inputs.get(field)
-        if val is not None and val != 0.0 and not (lo <= val <= hi):
+        if val is not None and not (lo <= val <= hi):
             warnings.append(f"{field.replace('_', ' ')}: {val} (expected {lo}–{hi})")
     return warnings
 
@@ -288,16 +392,17 @@ def validate_inputs_df(df):
     protected by validate_inputs() above via Streamlit widget bounds and an
     inline warning banner; CSV-uploaded data has no such protection unless
     checked here. Returns a tidy DataFrame of out-of-range values (empty if
-    none found). Same '0.0 is never flagged' convention as validate_inputs(),
-    since 0 is a legitimate value for several of these fields (e.g. sperm
-    count in azoospermia).
+    none found). Fields where 0 is legitimate (e.g. sperm count in
+    azoospermia) already have lo=0 in VALIDATION_RULES, so they never
+    trigger a warning for val=0 -- no separate "0 is never flagged"
+    exemption is needed (see the FIX note in validate_inputs() above).
     """
     rows = []
     for field, (lo, hi) in VALIDATION_RULES.items():
         if field not in df.columns:
             continue
         vals = pd.to_numeric(df[field], errors="coerce")
-        out_of_range = vals.notna() & (vals != 0.0) & ~vals.between(lo, hi)
+        out_of_range = vals.notna() & ~vals.between(lo, hi)
         for row_idx in df.index[out_of_range]:
             rows.append({
                 "Row":            int(row_idx) + 1,
@@ -325,47 +430,86 @@ def render_batch_validation_warnings(df_raw):
     return warn_df
 
 def compute_pw_features(df_raw):
+    # FIX (raised by manual review): fully rewritten for the re-selected
+    # CatBoost / 20-feature model (see PW_FEATURES above). Previously
+    # computed the OLD 16-feature XGBoost model's engineered columns
+    # (Delta_Motile, BMI_InfertilityType_Interaction, First_TPMSC only) and
+    # imputed missing raw inputs with a hardcoded PW_MEDIANS dict. Now
+    # computes the full set of engineered features this model actually
+    # needs (Ratio_TPMSC, Delta_Progressive_Motile, Age_FSH_Interaction, in
+    # addition to Total_Female_Pathology/First_TPMSC/Delta_Motile), and
+    # imputes ONCE at the end using the real fitted imputer
+    # (imputer_final_catboost.joblib, fit on Subtrain only) -- same pattern
+    # as compute_fv_features() below.
     df = df_raw.copy()
     missing = [c for c in PW_REQUIRED_RAW if c not in df.columns]
     if missing:
         raise ValueError("Missing required columns:\n- " + "\n- ".join(missing))
     for c in PW_REQUIRED_RAW:
         df[c] = pd.to_numeric(df[c], errors="coerce")
-    imputed = []
-    for c in PW_REQUIRED_RAW:
-        if df[c].isna().any():
-            df[c] = df[c].fillna(PW_MEDIANS.get(c, 0.0))
-            imputed.append(c)
-    if imputed:
-        st.info(f"ℹ️ Missing values imputed with training median for: {', '.join(imputed)}")
-    df["Total_Female_Pathology"]          = (df["Uterine_Factors"] + df["Tubal_Factors"] + df["Ovarian_Factors"] +
-                                              df["Ovulatory_Factors"] + df["Cervical_Factors"] +
-                                              df["Endometriosis_Factors"] + df["Multisystem_Factors"])
-    df["Delta_Motile"]                    = df["Post_Motile"] - df["Pre_Motile"]
-    df["BMI_InfertilityType_Interaction"] = df["Body_Mass_Index"] * df["Infertility_Type"]
-    df["First_TPMSC"]                     = (df["First_Volume"] * df["First_Count"] * df["First_Progressive_Motile"] / 100).clip(upper=200)
-    return df[PW_FEATURES].copy()
+
+    # FIX (raised by manual review): direct addition (a + b + c + ...)
+    # returns NaN for the WHOLE sum if even one of the 7 columns is
+    # missing -- matches neither feature_engineering.py's own
+    # add_female_interaction_features() (which uses .sum(axis=1,
+    # min_count=1), summing whatever pathology columns ARE present and
+    # only returning NaN if ALL 7 are missing) nor practical CSV-upload
+    # behavior, where a single missing pathology column would otherwise
+    # silently blank out this feature entirely.
+    df["Total_Female_Pathology"] = df[PATHOLOGY_COLS].sum(axis=1, min_count=1)
+    df["First_TPMSC"] = (
+        df["First_Volume"] * df["First_Count"] * df["First_Progressive_Motile"] / 100
+    ).clip(upper=200)
+    df["Delta_Motile"] = df["Post_Motile"] - df["Pre_Motile"]
+    df["Delta_Progressive_Motile"] = df["Post_Progressive_Motile"] - df["Pre_Progressive_Motile"]
+    df["Age_FSH_Interaction"] = df["Age_Female"] * df["FSH_Baseline"]
+    # Ratio_TPMSC: Post_TPMSC / Pre_TPMSC, clipped to [0, 10], matching
+    # feature_engineering.py's add_sperm_wash_features() exactly --
+    # undefined (NaN, later imputed) when Pre_TPMSC is not positive.
+    df["Ratio_TPMSC"] = np.where(
+        df["Pre_TPMSC"] > 0, df["Post_TPMSC"] / df["Pre_TPMSC"], np.nan
+    )
+    df["Ratio_TPMSC"] = df["Ratio_TPMSC"].clip(0, 10)
+
+    X = df[PW_FEATURES].copy()
+    na_cols = [c for c in PW_FEATURES if X[c].isna().any()]
+    if na_cols:
+        imputer = load_pw_imputer()
+        X = pd.DataFrame(imputer.transform(X), columns=PW_FEATURES, index=X.index)
+        st.info(f"ℹ️ Missing values imputed with training-set (Subtrain) median for: {', '.join(na_cols)}")
+    return X
 
 def compute_fv_features(df_raw):
+    # FIX (raised by manual review): previously imputed missing RAW inputs
+    # here using the hardcoded FV_MEDIANS dict, which duplicates -- and can
+    # silently drift out of sync with -- the actual SimpleImputer fit on
+    # Subtrain in first_visit_model.ipynb's Calibration Split cell (saved
+    # as first_visit_imputer.joblib, never loaded here before now). Missing
+    # values are now left as NaN through feature engineering and imputed
+    # ONCE at the end using that exact fitted imputer, so the median values
+    # used here are guaranteed identical to what the deployed model was
+    # calibrated against.
     df = df_raw.copy()
     missing = [c for c in FV_REQUIRED_RAW if c not in df.columns]
     if missing:
         raise ValueError("Missing required columns:\n- " + "\n- ".join(missing))
     for c in FV_REQUIRED_RAW:
         df[c] = pd.to_numeric(df[c], errors="coerce")
-    imputed = []
-    for c in FV_REQUIRED_RAW:
-        if df[c].isna().any():
-            df[c] = df[c].fillna(FV_MEDIANS.get(c, 0.0))
-            imputed.append(c)
-    if imputed:
-        st.info(f"ℹ️ Missing values imputed with training median for: {', '.join(imputed)}")
-    df["Total_Female_Pathology"]          = (df["Uterine_Factors"] + df["Tubal_Factors"] + df["Ovarian_Factors"] +
-                                              df["Ovulatory_Factors"] + df["Cervical_Factors"] +
-                                              df["Endometriosis_Factors"] + df["Multisystem_Factors"])
+    # FIX (same as compute_pw_features): use .sum(min_count=1) instead of
+    # direct addition, matching feature_engineering.py's own
+    # add_female_interaction_features() -- a single missing pathology
+    # column no longer blanks out the whole score.
+    df["Total_Female_Pathology"] = df[PATHOLOGY_COLS].sum(axis=1, min_count=1)
     df["BMI_InfertilityType_Interaction"] = df["Body_Mass_Index"] * df["Infertility_Type"]
     df["First_TPMSC"]                     = (df["First_Volume"] * df["First_Count"] * df["First_Progressive_Motile"] / 100).clip(upper=200)
-    return df[FV_FEATURES].copy()
+
+    X = df[FV_FEATURES].copy()
+    na_cols = [c for c in FV_FEATURES if X[c].isna().any()]
+    if na_cols:
+        imputer = load_fv_imputer()
+        X = pd.DataFrame(imputer.transform(X), columns=FV_FEATURES, index=X.index)
+        st.info(f"ℹ️ Missing values imputed with training-set (Subtrain) median for: {', '.join(na_cols)}")
+    return X
 
 def predict(X, model_type="postwash"):
     model, calibrator = load_model(model_type)
@@ -455,17 +599,26 @@ def render_factors(against, favor):
     col1, col2 = st.columns(2)
     with col1:
         if against:
-            html = '<div class="factors-card"><div class="factor-group-title factor-group-against">↓ Working against pregnancy</div>'
+            html = '<div class="factors-card"><div class="factor-group-title factor-group-against">↓ Decreasing the base-model prediction</div>'
             for f in against:
                 html += f'<div class="factor-row"><div class="factor-name">{f["name"]}</div><div class="factor-bar-bg"><div class="factor-bar-against" style="width:{f["strength"]*100:.0f}%"></div></div><div class="factor-label">{f["label"]}</div></div>'
             st.markdown(html + "</div>", unsafe_allow_html=True)
     with col2:
         if favor:
-            html = '<div class="factors-card"><div class="factor-group-title factor-group-favor">↑ Working in favor of pregnancy</div>'
+            html = '<div class="factors-card"><div class="factor-group-title factor-group-favor">↑ Increasing the base-model prediction</div>'
             for f in favor:
                 html += f'<div class="factor-row"><div class="factor-name">{f["name"]}</div><div class="factor-bar-bg"><div class="factor-bar-favor" style="width:{f["strength"]*100:.0f}%"></div></div><div class="factor-label">{f["label"]}</div></div>'
             st.markdown(html + "</div>", unsafe_allow_html=True)
-    st.caption("Factors are specific to this patient and ranked by how strongly they influence the result.")
+    # FIX (raised by manual review): SHAP explains the base model's raw
+    # output BEFORE isotonic calibration, and the deltas shown reflect
+    # association within the fitted model -- not a causal claim about
+    # what changes pregnancy chances. "Working for/against" is kept as the
+    # patient-facing label for readability, with that nuance stated here.
+    st.caption(
+        "Factors are specific to this patient and ranked by how strongly they influence the result. "
+        "These reflect the model's base prediction (before probability calibration) and are "
+        "statistical associations, not confirmed causal effects."
+    )
 
 def plot_shap_waterfall(X_row, model_type="postwash"):
     model, _ = load_model(model_type)
@@ -539,9 +692,9 @@ def generate_pdf_report(p_cal, model_type, against, favor, patient_id=""):
         return t
 
     if against:
-        story += [factor_table(against, "Working against pregnancy", colors.HexColor("#c53030")), Spacer(1, 6)]
+        story += [factor_table(against, "Decreasing the base-model prediction", colors.HexColor("#c53030")), Spacer(1, 6)]
     if favor:
-        story += [factor_table(favor, "Working in favor of pregnancy", colors.HexColor("#276749"))]
+        story += [factor_table(favor, "Increasing the base-model prediction", colors.HexColor("#276749"))]
 
     story += [
         Spacer(1, 16),
@@ -595,9 +748,16 @@ def render_cycle_history():
         ax.bar(labels, probs, color=[bcolors[e["tier_key"]] for e in st.session_state.cycle_history], width=0.5, zorder=3)
         ax.set_ylabel("Probability (%)", fontsize=9)
         ax.set_ylim(0, max(probs) * 1.6 + 1)
-        last_model_type = st.session_state.cycle_history[-1]["model_type"]
-        ref_cutoff = PW_CUTOFF if last_model_type == "postwash" else FV_CUTOFF
-        ax.axhline(ref_cutoff * 100, color="#94a3b8", linestyle="--", linewidth=0.8, alpha=0.5)
+        # FIX (raised by manual review): previously always drew a cutoff
+        # reference line using only the MOST RECENT entry's model type --
+        # if the session mixes Procedure-Day and Pre-treatment cycles
+        # (different cutoffs, 0.042 vs 0.068), that single line would be
+        # meaningless/misleading for entries from the other model. Only
+        # drawn when every entry in the visible history is the same model.
+        model_types_in_history = {e["model_type"] for e in st.session_state.cycle_history}
+        if len(model_types_in_history) == 1:
+            ref_cutoff = PW_CUTOFF if "postwash" in model_types_in_history else FV_CUTOFF
+            ax.axhline(ref_cutoff * 100, color="#94a3b8", linestyle="--", linewidth=0.8, alpha=0.5)
         for spine in ["top", "right"]: ax.spines[spine].set_visible(False)
         ax.grid(axis="y", alpha=0.15)
         plt.tight_layout()
@@ -609,12 +769,20 @@ def render_cycle_history():
         st.rerun()
 
 def build_pw_example():
-    return pd.DataFrame([{"Uterine_Factors":0,"Tubal_Factors":0,"Ovarian_Factors":0,"Ovulatory_Factors":0,
-        "Cervical_Factors":0,"Endometriosis_Factors":0,"Multisystem_Factors":0,"Cycle_Day":14,
-        "Post_TPMSC":10.0,"First_Count":40.0,"Pre_Count":35.0,"Gynecological_Surgical_History":0,
-        "Post_Count":12.0,"Post_Motile":80.0,"Pre_Motile":60.0,"Age_Female":32.0,
-        "First_Progressive_Motile":40.0,"First_Volume":2.5,"Menstrual_Interval_Days":28.0,
-        "First_Motile":60.0,"Body_Mass_Index":22.0,"Infertility_Type":0}])
+    # FIX (raised by manual review): rebuilt to match PW_REQUIRED_RAW for
+    # the re-selected CatBoost/20-feature model (see PW_FEATURES above) --
+    # the previous template still had the old 16-feature XGBoost model's
+    # raw columns (e.g. Cycle_Day, Infertility_Type). Numeric defaults are
+    # raw-data medians from data/raw/final_coding.xlsx.
+    row = {c: 0 for c in PW_REQUIRED_RAW}
+    row.update({
+        "Age_Female": 32.0, "Age_Male": 36.0, "Body_Mass_Index": 21.6,
+        "FSH_Baseline": 6.9, "Menstrual_Interval_Days": 28.0, "Dysmenorrhea": 1,
+        "First_Volume": 2.5, "First_Count": 40.0, "First_Progressive_Motile": 40.0,
+        "Pre_Count": 35.0, "Pre_Motile": 60.0, "Pre_Progressive_Motile": 55.2, "Pre_TPMSC": 49.1,
+        "Post_Count": 12.0, "Post_Motile": 80.0, "Post_Progressive_Motile": 96.7, "Post_TPMSC": 10.7,
+    })
+    return pd.DataFrame([row])
 
 def build_fv_example():
     return pd.DataFrame([{"Age_Female":32.0,"Body_Mass_Index":22.0,"Infertility_Type":0,
@@ -652,7 +820,7 @@ with st.sidebar:
 if "Single" in page:
     st.markdown('<div class="section-header">✏️ Single Patient Prediction</div>', unsafe_allow_html=True)
     model_choice = st.radio("Which model would you like to use?",
-        ["🔬 Procedure-Day Model — 16 features (recommended final model)",
+        ["🔬 Procedure-Day Model — 20 features (recommended final model)",
          "🏥 Pre-treatment Model — uses baseline data only (before IUI begins)"])
     if "Procedure-Day" in model_choice:
         model_type = "postwash"
@@ -660,7 +828,7 @@ if "Single" in page:
         model_type = "first_visit"
 
     if model_type == "postwash":
-        st.caption("Recommended final model. This 16-feature model was selected because it showed comparable performance to the full-feature model, while requiring fewer clinical inputs.")
+        st.caption("Recommended final model. This 20-feature model was selected as a development-stage, parsimony-favoring choice among candidates with statistically indistinguishable ranking performance to the full 66-feature model.")
     else:
         st.caption("Pre-treatment model. This form uses baseline clinical and initial semen parameters before IUI begins.")
 
@@ -671,48 +839,61 @@ if "Single" in page:
         bmi = 21.7
         infertility_type = 0
         infertile_duration = 36.0
-        cycle_day = 14.0
         uterine_factors = tubal_factors = ovarian_factors = ovulatory_factors = 0
         cervical_factors = endometriosis_factors = multisystem_factors = 0
         gyn_surgery = 0
         total_female_pathology = 0.0
         first_volume = 3.0
         first_count = 41.3
-        first_motile = 54.7
         first_prog_motile = 52.6
         pre_count = 42.6
         pre_motile = 57.6
+        pre_prog_motile = 55.2
+        pre_tpmsc = 49.1
         post_count = 22.2
-        post_tpmsc = 10.6
+        post_tpmsc = 10.7
         post_motile = 96.93
+        post_prog_motile = 96.7
+        age_male = 37.0
+        fsh_baseline = 6.9
+        dysmenorrhea = 1
 
         if model_type == "postwash":
             with col1:
                 st.markdown('<div class="form-group-label">Female Factors</div>', unsafe_allow_html=True)
                 age_female = st.number_input("Age (years)", 18.0, 55.0, 35.0, 1.0)
-                bmi = st.number_input("BMI (kg/m²)", 10.0, 60.0, 21.7, 0.1)
-                infertility_type = st.selectbox("Infertility type", [0, 1],
-                    format_func=lambda x: "Primary — no prior pregnancy" if x == 0 else "Secondary — prior pregnancy")
+                age_male = st.number_input(
+                    "Male partner age (years)", 18.0, 65.0, 36.0, 1.0,
+                    help="Default (36.0) is the median from the cleaned, filtered training cohort "
+                         "(n=2,945 cycles, matching data_prep.py's pipeline) in data/raw/final_coding.xlsx."
+                )
+                bmi = st.number_input("BMI (kg/m²)", 10.0, 60.0, 21.6, 0.1)
                 menstrual_interval_days = st.number_input("Menstrual cycle length (days)", 15.0, 180.0, 29.0, 1.0)
-                cycle_day = st.number_input("IUI cycle day", 1.0, 40.0, 14.0, 1.0)
+                fsh_baseline = st.number_input(
+                    "Baseline FSH (IU/L)", 0.0, 40.0, 6.9, 0.1,
+                    help="Default (6.9) is the median from the cleaned, filtered training cohort (n=2,945 cycles)."
+                )
+                # FIX (raised by manual review): Dysmenorrhea is an ORDINAL
+                # severity scale (0-3 in the raw dataset), not binary --
+                # previously implemented as a [0, 1] selectbox, which would
+                # have silently excluded valid moderate/severe codes (2, 3).
+                dysmenorrhea = st.selectbox(
+                    "Dysmenorrhea severity", [0, 1, 2, 3], index=1,
+                    format_func=lambda x: {0: "0 — None", 1: "1 — Mild", 2: "2 — Moderate", 3: "3 — Severe"}[x],
+                    help="Ordinal severity scale, matching the raw dataset's coding."
+                )
 
                 st.markdown('<div class="form-group-label">Female Pathology</div>', unsafe_allow_html=True)
                 uterine_factors = st.selectbox("Uterine factor", [0, 1])
-                ovulatory_factors = st.selectbox("Ovulatory factor", [0, 1])
                 gyn_surgery = st.selectbox("Prior gynecologic surgery", [0, 1])
                 # FIX: Total female pathology score must sum all 7 factors
                 # (Uterine, Tubal, Ovarian, Ovulatory, Cervical, Endometriosis,
                 # Multisystem) to match compute_pw_features(), which is what the
-                # model was trained on. Only Uterine/Ovulatory are used as their
-                # own model features and shown above; the other 5 are collected
-                # here solely to compute a correct total, matching the CSV
-                # upload path exactly. Previously this field defaulted to
-                # uterine + ovulatory only (2 of 7), silently undercounting the
-                # score for patients with tubal, ovarian, cervical, or
-                # multisystem pathology unless the clinician manually corrected it.
-                with st.expander("Other pathology factors (tubal, ovarian, cervical, multisystem)"):
+                # model was trained on.
+                with st.expander("Other pathology factors (tubal, ovarian, ovulatory, cervical, endometriosis, multisystem)"):
                     tubal_factors = st.selectbox("Tubal factor", [0, 1], key="pw_tubal")
                     ovarian_factors = st.selectbox("Ovarian factor", [0, 1], key="pw_ovarian")
+                    ovulatory_factors = st.selectbox("Ovulatory factor", [0, 1], key="pw_ovulatory")
                     cervical_factors = st.selectbox("Cervical factor", [0, 1], key="pw_cervical")
                     endometriosis_factors = st.selectbox("Endometriosis", [0, 1], key="pw_endo")
                     multisystem_factors = st.selectbox("Multisystem factor", [0, 1], key="pw_multi")
@@ -732,11 +913,24 @@ if "Single" in page:
                 st.markdown('<div class="form-group-label">Prewash Semen</div>', unsafe_allow_html=True)
                 pre_count = st.number_input("Prewash sperm concentration (×10⁶/mL)", 0.0, 500.0, 42.6, 0.1)
                 pre_motile = st.number_input("Prewash total motility (%)", 0.0, 100.0, 57.6, 0.1)
+                pre_prog_motile = st.number_input(
+                    "Prewash progressive motility (%)", 0.0, 100.0, 55.2, 0.1,
+                    help="Default (55.2) is the median from the cleaned, filtered training cohort (n=2,945 cycles)."
+                )
+                pre_tpmsc = st.number_input(
+                    "Prewash TPMSC (×10⁶)", 0.0, 700.0, 49.1, 0.1,
+                    help="Default (49.1) is the median from the cleaned, filtered training cohort (n=2,945 cycles)."
+                )
 
                 st.markdown('<div class="form-group-label">Postwash Semen</div>', unsafe_allow_html=True)
                 post_count = st.number_input("Postwash sperm count (×10⁶/mL)", 0.0, 500.0, 22.2, 0.1)
-                post_tpmsc = st.number_input("Postwash TPMSC (×10⁶)", 0.0, 500.0, 10.6, 0.1)
+                post_tpmsc = st.number_input("Postwash TPMSC (×10⁶)", 0.0, 500.0, 10.7, 0.1)
                 post_motile = st.number_input("Postwash total motility (%)", 0.0, 100.0, 96.93, 0.1)
+                post_prog_motile = st.number_input(
+                    "Postwash progressive motility (%)", 0.0, 100.0, 96.7, 0.1,
+                    help="Default (96.7) is the raw-data median from data/raw/final_coding.xlsx "
+                         "— naturally high, since this is the selected/concentrated sperm fraction."
+                )
 
         else:
             with col1:
@@ -783,14 +977,18 @@ if "Single" in page:
         raw_inputs = {
             "Age_Female": age_female, "Body_Mass_Index": bmi,
             "Menstrual_Interval_Days": menstrual_interval_days,
-            "Cycle_Day": cycle_day if model_type == "postwash" else None,
             "First_Volume": first_volume, "First_Count": first_count,
-            "First_Motile": first_motile, "First_Progressive_Motile": first_prog_motile,
+            "First_Progressive_Motile": first_prog_motile,
             "Pre_Count": pre_count if model_type == "postwash" else None,
             "Pre_Motile": pre_motile if model_type == "postwash" else None,
+            "Pre_Progressive_Motile": pre_prog_motile if model_type == "postwash" else None,
+            "Pre_TPMSC": pre_tpmsc if model_type == "postwash" else None,
             "Post_Count": post_count if model_type == "postwash" else None,
             "Post_TPMSC": post_tpmsc if model_type == "postwash" else None,
             "Post_Motile": post_motile if model_type == "postwash" else None,
+            "Post_Progressive_Motile": post_prog_motile if model_type == "postwash" else None,
+            "Age_Male": age_male if model_type == "postwash" else None,
+            "FSH_Baseline": fsh_baseline if model_type == "postwash" else None,
             "Total_infertile_duration": infertile_duration if model_type == "first_visit" else None,
         }
         for w in validate_inputs({k: v for k, v in raw_inputs.items() if v is not None}):
@@ -798,44 +996,49 @@ if "Single" in page:
 
         try:
             with st.spinner("Calculating..."):
+                # FIX (raised by manual review): the Single Patient form
+                # previously re-implemented the engineered-feature formulas
+                # (Total_Female_Pathology, First_TPMSC, etc.) inline, a
+                # THIRD copy of the same logic already in
+                # compute_pw_features()/compute_fv_features() (used by the
+                # Multiple Patients / Detailed Analysis pages). Duplicated
+                # logic drifted out of sync before (the pathology-score sum
+                # once silently only summed 2 of 7 factors here). Now
+                # routes through the SAME function every other page uses,
+                # so there is exactly one place these formulas live.
                 if model_type == "postwash":
-                    X = pd.DataFrame([{
-                        "Uterine_Factors": uterine_factors,
-                        "Total_Female_Pathology": total_female_pathology,
-                        "Ovulatory_Factors": ovulatory_factors,
-                        "Cycle_Day": cycle_day,
-                        "First_Count": first_count,
-                        "Pre_Count": pre_count,
-                        "Post_TPMSC": post_tpmsc,
-                        "Gynecological_Surgical_History": gyn_surgery,
-                        "Delta_Motile": post_motile - pre_motile,
-                        "Age_Female": age_female,
-                        "First_Volume": first_volume,
-                        "Post_Count": post_count,
+                    raw_row = {
+                        "Uterine_Factors": uterine_factors, "Tubal_Factors": tubal_factors,
+                        "Ovarian_Factors": ovarian_factors, "Ovulatory_Factors": ovulatory_factors,
+                        "Cervical_Factors": cervical_factors, "Endometriosis_Factors": endometriosis_factors,
+                        "Multisystem_Factors": multisystem_factors,
                         "Menstrual_Interval_Days": menstrual_interval_days,
+                        "First_Count": first_count, "First_Volume": first_volume,
                         "First_Progressive_Motile": first_prog_motile,
-                        "First_TPMSC": min(first_volume * first_count * first_prog_motile / 100, 200),
-                        "BMI_InfertilityType_Interaction": bmi * infertility_type,
-                    }])[PW_FEATURES].copy()
-                else:
-                    X = pd.DataFrame([{
-                        "Age_Female": age_female,
+                        "Post_TPMSC": post_tpmsc, "Post_Count": post_count,
+                        "Post_Progressive_Motile": post_prog_motile, "Post_Motile": post_motile,
+                        "Age_Female": age_female, "Age_Male": age_male, "FSH_Baseline": fsh_baseline,
+                        "Pre_TPMSC": pre_tpmsc, "Pre_Count": pre_count, "Pre_Motile": pre_motile,
+                        "Pre_Progressive_Motile": pre_prog_motile,
+                        "Dysmenorrhea": dysmenorrhea, "Gynecological_Surgical_History": gyn_surgery,
                         "Body_Mass_Index": bmi,
+                    }
+                    X = compute_pw_features(pd.DataFrame([raw_row]))
+                else:
+                    raw_row = {
+                        "Age_Female": age_female, "Body_Mass_Index": bmi,
                         "Infertility_Type": infertility_type,
                         "Total_infertile_duration": infertile_duration,
                         "Menstrual_Interval_Days": menstrual_interval_days,
-                        "Uterine_Factors": uterine_factors,
-                        "Ovulatory_Factors": ovulatory_factors,
-                        "Tubal_Factors": tubal_factors,
-                        "Endometriosis_Factors": endometriosis_factors,
+                        "Uterine_Factors": uterine_factors, "Tubal_Factors": tubal_factors,
+                        "Ovarian_Factors": ovarian_factors, "Ovulatory_Factors": ovulatory_factors,
+                        "Cervical_Factors": cervical_factors, "Endometriosis_Factors": endometriosis_factors,
+                        "Multisystem_Factors": multisystem_factors,
                         "Gynecological_Surgical_History": gyn_surgery,
-                        "Total_Female_Pathology": total_female_pathology,
-                        "First_Volume": first_volume,
-                        "First_Count": first_count,
+                        "First_Volume": first_volume, "First_Count": first_count,
                         "First_Progressive_Motile": first_prog_motile,
-                        "First_TPMSC": min(first_volume * first_count * first_prog_motile / 100, 200),
-                        "BMI_InfertilityType_Interaction": bmi * infertility_type,
-                    }])[FV_FEATURES].copy()
+                    }
+                    X = compute_fv_features(pd.DataFrame([raw_row]))
 
                 p_val = float(predict(X, model_type)[0])
                 against, favor = get_factors(X, model_type, top_k=5)
@@ -946,7 +1149,7 @@ elif "About" in page:
                 it gives a more complete picture of the cycle's chances.
             </p>
             <p style="color:#94a3b8;font-size:0.85rem;margin-top:0.5rem;">
-                ROC-AUC 0.636 &nbsp;·&nbsp; Sensitivity 49.1% &nbsp;·&nbsp; NPV 94.7%
+                ROC-AUC 0.664 &nbsp;·&nbsp; Sensitivity 63.4% &nbsp;·&nbsp; NPV 95.8%
             </p>
         </div>
         """, unsafe_allow_html=True)
@@ -961,7 +1164,7 @@ elif "About" in page:
                 before IUI begins — no sperm wash results needed.
             </p>
             <p style="color:#94a3b8;font-size:0.85rem;margin-top:0.5rem;">
-                ROC-AUC 0.619 &nbsp;·&nbsp; Sensitivity 80.5% &nbsp;·&nbsp; NPV 96.6%
+                ROC-AUC 0.571 &nbsp;·&nbsp; Sensitivity 63.4% &nbsp;·&nbsp; NPV 94.6%
             </p>
         </div>
         """, unsafe_allow_html=True)
@@ -978,20 +1181,31 @@ elif "About" in page:
     | 🔴 Low Probability | Lower predicted probability compared with the cohort |
     | 🟢 High Probability | Higher predicted probability compared with the cohort |
 
-    **The factors chart** shows which parameters are working for or against this patient. Bars show how strongly each factor influences the result — Strong, Moderate, or Mild.
+    **The factors chart** shows which parameters increase or decrease the model's base prediction for this patient (before probability calibration). Bars show how strongly each factor influences the result — Strong, Moderate, or Mild. These are statistical associations from the model, not confirmed causal effects.
     """)
 
     with st.expander("Technical details — for researchers"):
         st.markdown("""
-        **Algorithm:** XGBoost with isotonic regression calibration  
+        **Algorithm:** CatBoost (Procedure-Day) / LightGBM (Pre-treatment), both with isotonic
+        regression calibration and development-stage multi-criteria model selection
+        (not simply the highest-PR-AUC candidate)  
         **Cohort:** 2,945 cycles, 1,761 patients (single-center, Thailand)  
-        **Validation:** Patient-level holdout validation
+        **Validation:** Internal patient-level holdout (external validation not yet performed)
 
-        | Metric | Procedure-Day | Pre-treatment |
+        | Metric | Procedure-Day (20 features) | Pre-treatment (16 features) |
         |---|---:|---:|
-        | ROC-AUC | 0.636 | 0.619 |
-        | Sensitivity | 49.1% | 80.5% |
-        | NPV | 94.7% | 96.6% |
+        | ROC-AUC | 0.664 (0.593–0.736) | 0.571 (0.462–0.677) |
+        | Sensitivity | 63.4% | 63.4% |
+        | Specificity | 61.2% | 47.5% |
+        | NPV | 95.8% | 94.6% |
+        | Calibrated Brier | 0.068 | 0.064 |
+
+        Discrimination is modest for both models. The Procedure-Day model showed a higher point
+        estimate for discrimination than the Pre-treatment model, consistent with postwash semen
+        parameters carrying more predictive information than baseline-only variables; this
+        difference has not been confirmed by a paired statistical comparison. Calibrated Brier
+        scores were close to the constant-prevalence no-skill baseline for both models; the
+        First-Visit model showed only a marginal numerical improvement (0.0636 vs. 0.0640).
         """)
 
     st.markdown("""
@@ -999,6 +1213,6 @@ elif "About" in page:
         This tool is a research prototype for academic purposes only. It is intended to support clinical judgment
         and should not be used as the sole basis for clinical decision-making. Outputs are statistical estimates
         derived from a single-center retrospective cohort of IUI cycles performed at a Thai fertility center.
-        Temporal validation on a newer cohort is currently being evaluated.
+        External validation on an independent cohort has not yet been performed.
     </div>
     """, unsafe_allow_html=True)
