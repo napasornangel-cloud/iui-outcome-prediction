@@ -1,0 +1,12 @@
+{
+  "manifest_version": 2,
+  "final_model_name": "CatBoost",
+  "final_method_name": "Baseline_NoResampling",
+  "final_model_key": "CatBoost__Baseline_NoResampling",
+  "selected_k": 11,
+  "metrics_filename": "Full_vs_11feature_metrics.xlsx",
+  "bootstrap_ci_filename": "bootstrap_ci.xlsx",
+  "tier_summary_filename": "Pregnancy_Probability_Tier_Summary_FinalModel_Calibrated.xlsx",
+  "tier_cutoff": 0.0440251572327044,
+  "tier_boundary_rule": "p_cal <= cutoff -> Low; p_cal > cutoff -> High"
+}
