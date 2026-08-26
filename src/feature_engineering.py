@@ -91,33 +91,19 @@ def add_sperm_quality_features(df: pd.DataFrame) -> pd.DataFrame:
 def add_binary_clinical_flags(df: pd.DataFrame) -> pd.DataFrame:
     data = df.copy()
 
-    if "Post_TPMSC" in data.columns:
-        data["Low_TPMSC"] = np.where(
-            data["Post_TPMSC"].isna(),
-            np.nan,
-            (data["Post_TPMSC"] < 5).astype(float),
-        )
-
-    if "Endometrium_Thickness" in data.columns:
-        data["Thin_Endometrium"] = np.where(
-            data["Endometrium_Thickness"].isna(),
-            np.nan,
-            (data["Endometrium_Thickness"] < 7).astype(float),
-        )
-
-    if "Age_Female" in data.columns:
-        # FIX: added NaN guard, consistent with Low_TPMSC / Thin_Endometrium
-        # above. Previously, missing Age_Female would silently evaluate
-        # (NaN >= 38) as False -> 0, mislabeling patients with unknown age
-        # as "not advanced age" rather than leaving the flag undefined. Not
-        # impactful on the current dataset (Age_Female has 0% missing), but
-        # protects against this failure mode if the pipeline is reused on
-        # external data with missing age values.
-        data["Advanced_Age"] = np.where(
-            data["Age_Female"].isna(),
-            np.nan,
-            (data["Age_Female"] >= 38).astype(float),
-        )
+    # REMOVED: Low_TPMSC, Thin_Endometrium, Advanced_Age -- all three
+    # threshold-based flags removed from the candidate pool (final
+    # pool = 63 features). Advanced_Age removed due to a documented SHAP
+    # direction-reversal artifact vs continuous Age_Female. Low_TPMSC and
+    # Thin_Endometrium removed because they never ranked among top
+    # features across any configuration tested. Delta_Motile is
+    # RETAINED (see add_sperm_wash_features above) despite comparably
+    # high collinearity with Pre_Motile (r=-0.937), and
+    # Delta_Progressive_Motile is also RETAINED despite similar
+    # collinearity with Pre_Progressive_Motile (r=-0.930) -- both are
+    # documented as a Discussion/Limitation rather than excluded, per
+    # the project's evidence-based exclusion criterion (exclude only
+    # when BOTH near-collinearity AND consistent low importance apply).
 
     return data
 
@@ -161,9 +147,7 @@ def run_feature_engineering(input_path: str | Path, output_path: str | Path) -> 
         "BMI_InfertilityType_Interaction",
         "Total_Female_Pathology",
         "First_TPMSC",
-        "Low_TPMSC",
-        "Thin_Endometrium",
-        "Advanced_Age",
+        # REMOVED: "Low_TPMSC", "Thin_Endometrium", "Advanced_Age"
     ]
 
     summarize_added_features(df, engineered_features)
