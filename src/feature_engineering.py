@@ -55,6 +55,12 @@ def add_female_interaction_features(df: pd.DataFrame) -> pd.DataFrame:
             data["Body_Mass_Index"] * data["Infertility_Type"]
         )
 
+    # Multisystem_Factors is excluded: it is a derived flag meaning
+    # "patient has more than one concurrent female pathology factor
+    # present," not an independent category. Including it would
+    # double-count -- e.g. Uterine=1 and Tubal=1 (2 true factors) would
+    # also set Multisystem=1, inflating the sum to 3. Only the six
+    # genuinely independent binary pathology factors are summed below.
     factor_cols = [
         "Uterine_Factors",
         "Tubal_Factors",
@@ -62,7 +68,8 @@ def add_female_interaction_features(df: pd.DataFrame) -> pd.DataFrame:
         "Ovulatory_Factors",
         "Cervical_Factors",
         "Endometriosis_Factors",
-        "Multisystem_Factors",
+        # REMOVED: "Multisystem_Factors" -- derived meta-flag, not an
+        # independent pathology category; see comment above.
     ]
     available_factor_cols = [col for col in factor_cols if col in data.columns]
 

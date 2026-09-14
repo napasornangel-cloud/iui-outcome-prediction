@@ -7,6 +7,6 @@
   "metrics_filename": "Full_vs_11feature_metrics.xlsx",
   "bootstrap_ci_filename": "bootstrap_ci.xlsx",
   "tier_summary_filename": "Pregnancy_Probability_Tier_Summary_FinalModel_Calibrated.xlsx",
-  "tier_cutoff": 0.0440251572327044,
+  "tier_cutoff": 0.03409090909090909,
   "tier_boundary_rule": "p_cal <= cutoff -> Low; p_cal > cutoff -> High"
 }

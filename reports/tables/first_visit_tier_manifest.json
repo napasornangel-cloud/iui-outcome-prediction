@@ -1,5 +1,5 @@
 {
-  "cutoff": 0.05789473684210526,
+  "cutoff": 0.041666666666666664,
   "boundary_rule": "p_cal <= cutoff -> Low; p_cal > cutoff -> High",
   "tier_labels": [
     "Low",
