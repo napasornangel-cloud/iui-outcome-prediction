@@ -1,5 +1,5 @@
 # iui-pregnancy-prediction
-Machine learning model for predicting IUI clinical pregnancy outcomes with temporal validation and Streamlit clinical decision support tool
+Machine learning model for predicting IUI clinical pregnancy outcomes with internal patient-grouped validation and a Streamlit-based application
 
 ## Naming note
 > `src/first_visit_model.ipynb` and its saved artifacts
